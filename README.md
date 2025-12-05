@@ -50,14 +50,15 @@ Ensuite, installe le reste des dépendances normalement.
 ### 1. Cloner le dépôt
 
 ```bash
-git clone https://github.com/<ton-compte>/<ton-repo-pia-pia>.git
-cd <ton-repo-pia-pia>
+git clone https://github.com/DanielHry/pia-pia.git
+cd pia-pia
 ```
 
 ### 2. Créer un environnement virtuel
 
 ```bash
 python -m venv .venv
+
 source .venv/bin/activate  # Linux / macOS
 # ou
 .\.venv\Scripts\activate   # Windows
