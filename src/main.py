@@ -12,7 +12,7 @@ from src.bot.piapia_bot import PiaPiaBot
 from src.bot.cogs.audio_cog import AudioCog
 from src.bot.cogs.pdf_cog import PdfCog
 from src.bot.cogs.admin_cog import AdminCog
-
+from src.utils.whisper_preload import preload_whisper_model_if_needed  # 👈 nouveau
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,11 @@ def main() -> None:
     # ------------------------------------------------------------------ #
     configure_logging(settings)
     logger.info("Lancement de Pia-Pia Bot 🦜")
+
+    # ------------------------------------------------------------------ #
+    # 2bis. Préchargement éventuel du modèle Whisper
+    # ------------------------------------------------------------------ #
+    preload_whisper_model_if_needed(settings)
 
     # ------------------------------------------------------------------ #
     # 3. Event loop & bot

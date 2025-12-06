@@ -3,7 +3,6 @@
 import logging
 import logging.config
 import os
-from datetime import datetime
 
 from src.config.settings import Settings
 
@@ -13,7 +12,8 @@ def configure_logging(settings: Settings) -> None:
     Configure le logging global de l'application à partir des Settings.
 
     - Root logger : console (niveau INFO ou DEBUG selon settings.debug)
-    - Logger 'transcription' : fichier .log (JSON), un par jour
+    - Logger 'transcription' : plus de handler par défaut, il est configuré
+      dynamiquement par DiscordSink pour écrire dans un fichier par session.
     """
 
     # Répertoires de base
@@ -25,13 +25,6 @@ def configure_logging(settings: Settings) -> None:
     os.makedirs(transcripts_dir, exist_ok=True)
     os.makedirs(pdf_dir, exist_ok=True)
     os.makedirs(audio_dir, exist_ok=True)
-
-    # Fichier de transcription : .logs/transcripts/YYYY-MM-DD-transcription.log
-    current_date = datetime.now().strftime("%Y-%m-%d")
-    transcription_log_file = os.path.join(
-        transcripts_dir,
-        f"{current_date}-transcription.log",
-    )
 
     # Niveau de log global
     level = logging.DEBUG if settings.debug else logging.INFO
@@ -45,11 +38,6 @@ def configure_logging(settings: Settings) -> None:
                 "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
                 "datefmt": "%Y-%m-%d %H:%M:%S",
             },
-            # Pour le logger 'transcription', on écrit déjà du JSON complet,
-            # donc on ne garde que le message.
-            "transcription": {
-                "format": "%(message)s",
-            },
         },
         "handlers": {
             "console": {
@@ -58,21 +46,15 @@ def configure_logging(settings: Settings) -> None:
                 "formatter": "standard",
                 "stream": "ext://sys.stdout",
             },
-            "transcription_file": {
-                "class": "logging.FileHandler",
-                "level": "INFO",
-                "formatter": "transcription",
-                "filename": transcription_log_file,
-                "mode": "a",
-                "encoding": "utf-8",
-            },
         },
         "loggers": {
-            # Logger dédié aux transcriptions (JSON lignes)
+            # Logger dédié aux transcriptions JSON.
+            # -> Pas de handler par défaut : DiscordSink ajoute/retire
+            #    son propre FileHandler par session.
             "transcription": {
-                "handlers": ["transcription_file"],
+                "handlers": [],
                 "level": "INFO",
-                "propagate": False,
+                "propagate": False,  # on évite que le JSON aille dans la console
             },
             # Réduire le bruit de certaines libs
             "discord": {

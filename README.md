@@ -120,11 +120,21 @@ Ensuite, édite `.env` avec tes valeurs. Les variables principales :
 
 - `WHISPER_LANGUAGE`
 
-    Code langue ISO (fr, en, …) pour guider la transcription.
+    Code langue ISO (`fr`, `en`, …) pour guider la transcription.
 
 - `WHISPER_COMPUTE_TYPE`
     - sur GPU : souvent `float16` ou `bfloat16`
     - sur CPU : `float32` (plus stable si pas de support half precision)
+
+- `WHISPER_CACHE_DIR`
+    
+    Contrôle l’emplacement du cache Hugging Face utilisé pour les modèles Whisper :
+
+    - `default` → cache standard (`~/.cache/huggingface` ou équivalent)
+
+    - chemin absolu → par exemple `/app/data/hf_cache` (très pratique en Docker pour monter un volume et éviter de re-télécharger le modèle à chaque conteneur)
+
+    > Lorsque `TRANSCRIPTION_METHOD=local`, Pia-Pia **précharge le modèle Whisper au démarrage**. Si le modèle n’est pas encore présent dans le cache, il sera téléchargé à ce moment-là (le premier lancement peut donc être un peu long).
 
 - `SILENCE_THRESHOLD`
 
@@ -246,6 +256,7 @@ Les paramètres principaux contrôlés via `.env` :
 - `WHISPER_LANGUAGE` : langue principale (`fr`, `en`, …).
 - `WHISPER_COMPUTE_TYPE` : type de calcul (`float16`, `float32`, `bfloat16` …).
 - `TRANSCRIPTION_METHOD` : `local` ou `openai`.
+- `WHISPER_CACHE_DIR` : emplacement du cache Hugging Face pour les modèles (très utile en Docker pour monter un volume et éviter les re-téléchargements).
 
 ---
 

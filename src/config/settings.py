@@ -1,7 +1,6 @@
-# src/config/settings.py
+from typing import Optional
 
 from pydantic import BaseSettings, Field
-from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -22,6 +21,9 @@ class Settings(BaseSettings):
     whisper_model: str = Field("large-v3", env="WHISPER_MODEL")
     whisper_language: str = Field("fr", env="WHISPER_LANGUAGE")
     whisper_compute_type: str = Field("float16", env="WHISPER_COMPUTE_TYPE")
+    whisper_cache_dir: str = Field(
+        "default", env="WHISPER_CACHE_DIR"
+    )  # "default" ou chemin de cache Hugging Face
     min_audio_duration: float = Field(0.1, env="MIN_AUDIO_DURATION")     # secondes
     silence_threshold: float = Field(1.2, env="SILENCE_THRESHOLD")       # secondes
 
