@@ -5,9 +5,9 @@ import logging
 import wave
 from typing import Any, Dict, Optional
 
-import torch
-from faster_whisper import WhisperModel
 from openai import OpenAI
+
+from src.utils.whisper_preload import get_whisper_model
 
 logger = logging.getLogger(__name__)
 
@@ -45,42 +45,13 @@ class Transcriber:
         }
 
         if mode == "local":
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-
-            if device == "cuda":
-                try:
-                    props = torch.cuda.get_device_properties(0)
-                    gpu_ram_gb = props.total_memory / 1024**3
-                    if gpu_ram_gb < vram_min_gb:
-                        logger.warning(
-                            "GPU has only %.1fGB VRAM (< %.1fGB). Falling back to CPU.",
-                            gpu_ram_gb,
-                            vram_min_gb,
-                        )
-                        device = "cpu"
-                except Exception as e:
-                    logger.warning("Error checking GPU VRAM, falling back to CPU: %s", e)
-                    device = "cpu"
-
-            # Choix du compute_type en fonction du device
-            if compute_type is not None:
-                ct = compute_type
-            else:
-                if device == "cuda":
-                    ct = "float16"
-                else:
-                    # Sur CPU, float16 est mal supporté → on prend int8 (ou float32 si tu préfères)
-                    ct = "int8"
-
-            logger.info(
-                "Loading Faster-Whisper model '%s' on device=%s (compute_type=%s)",
-                model_name,
-                device,
-                ct,
+            # On récupère le modèle *partagé* via le provider
+            self.model = get_whisper_model(
+                model_name=model_name,
+                compute_type=compute_type,
+                vram_min_gb=vram_min_gb,
             )
-            self.model = WhisperModel(model_name, device=device, compute_type=ct)
             self.client = None
-
         else:
             logger.info("Using OpenAI Whisper API for transcription")
             self.client = OpenAI()
