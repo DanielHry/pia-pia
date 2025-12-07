@@ -20,7 +20,7 @@ Chaque joueur est associé à un personnage, ce qui permet d’obtenir un compte
 - 🎧 **Archivage audio brut (optionnel)** :
   - un fichier WAV par utilisateur, par session
   - utile pour ré-analyser une partie plus tard
-
+- 🐋 **Déploiement possible en Docker (CPU ou GPU)**.
 ---
 
 ## 🧩 Prérequis
@@ -240,6 +240,83 @@ Affiche un message d’aide récapitulant ce que sait faire Pia-Pia et les comma
 - Persiste le tout dans `config/player_map.yaml`.
 
 Pratique si vous avez de nouveaux joueurs ou si quelqu’un change son pseudo / display name.
+
+---
+
+## 🐋 Docker (optionnel)
+
+Pia-Pia peut tourner :
+
+- soit directement avec Python (`python -m src.main`),
+- soit via Docker, avec deux services définis dans `docker-compose.yml` :
+  - `pia-pia-cpu` (image basée sur `Dockerfile`),
+  - `pia-pia-gpu` (image basée sur `Dockerfile.gpu`).
+
+### 1. Build des images
+
+Depuis la racine du projet :
+
+```bash
+# Image CPU
+docker compose build pia-pia-cpu
+
+# Image GPU
+docker compose build pia-pia-gpu
+```
+
+### 2. Service CPU
+
+Usage typique (sans GPU, ou juste pour tester) :
+
+```bash
+docker compose up -d pia-pia-cpu
+```
+
+Le service :
+- utilise les variables définies dans `.env` (`env_file: - .env`),
+- monte par défaut :
+    - `./data/logs` sur `/app/.logs` (logs + transcriptions + PDF),
+    - `./config` sur `/app/config` (dont `player_map.yaml`).
+
+### 3. Service GPU (recommandé pour large-v3)
+
+Dans ton .env, pense à mettre quelque chose comme :
+
+```bash
+TRANSCRIPTION_METHOD=local
+WHISPER_MODEL=large-v3
+WHISPER_LANGUAGE=fr
+WHISPER_COMPUTE_TYPE=float16
+
+# Important pour Docker GPU :
+WHISPER_CACHE_DIR=/app/data/hf_cache
+```
+
+Le `docker-compose.yml` monte ce cache dans un volume :
+
+```yaml
+volumes:
+  - ./data/hf_cache:/app/data/hf_cache
+```
+
+Au premier démarrage, Pia-Pia télécharge le modèle Whisper dans `./data/hf_cache` (sur l’hôte)
+
+Lancer le service GPU :
+```bash
+docker compose up -d pia-pia-gpu
+
+# ou
+
+docker run -d \
+  --name pia-pia-gpu \
+  --gpus '"device=0"' \         # en précisant le GPU ID
+  --env-file .env \
+  --restart unless-stopped \
+  -v $(pwd)/data/logs:/app/.logs \
+  -v $(pwd)/config:/app/config \
+  -v $(pwd)/data/hf_cache:/app/data/hf_cache \
+  pia-pia:gpu
+```
 
 ---
 

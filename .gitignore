@@ -61,4 +61,5 @@ logs/
 .logs
 .env
 
-TODO.*
+data/
+config/player_map.yaml

@@ -1,0 +1,32 @@
+services:
+  pia-pia-cpu:
+    image: pia-pia:cpu
+    build:
+      context: .
+      dockerfile: Dockerfile    # Dockerfile CPU
+    container_name: pia-pia-cpu
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data/logs:/app/.logs
+      - ./config:/app/config
+
+  pia-pia-gpu:
+    image: pia-pia:gpu
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    container_name: pia-pia-gpu
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data/logs:/app/.logs
+      - ./config:/app/config
+      - ./data/hf_cache:/app/data/hf_cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]

@@ -1,0 +1,36 @@
+# Git
+.git
+.gitignore
+
+# Environnements virtuels
+.venv/
+venv/
+
+# Caches Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+
+# IDE / tooling
+.vscode/
+.idea/
+.pytest_cache/
+.mypy_cache/
+
+# Logs et données générées
+.logs/
+*.log
+tmp/
+data/
+
+# Autres trucs lourds éventuels
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.pdf
