@@ -92,6 +92,9 @@ def main() -> None:
         loop.run_until_complete(_run_bot())
     except KeyboardInterrupt:
         logger.info("^C reçu, arrêt de Pia-Pia en cours...")
+    except Exception:
+        # Toute autre exception non gérée -> on logue avec stacktrace
+        logger.exception("Exception non gérée au niveau main :")
     finally:
         # Arrêt propre des sinks et ressources internes
         loop.run_until_complete(bot.stop_and_cleanup())

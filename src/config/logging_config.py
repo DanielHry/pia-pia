@@ -3,6 +3,7 @@
 import logging
 import logging.config
 import os
+from datetime import datetime
 
 from src.config.settings import Settings
 
@@ -11,9 +12,8 @@ def configure_logging(settings: Settings) -> None:
     """
     Configure le logging global de l'application à partir des Settings.
 
-    - Root logger : console (niveau INFO ou DEBUG selon settings.debug)
-    - Logger 'transcription' : plus de handler par défaut, il est configuré
-      dynamiquement par DiscordSink pour écrire dans un fichier par session.
+    - Root logger : console + fichier app (.logs/pia-pia.log)
+    - Logger 'transcription' : fichier .log (JSON), un par session (créé plus tard)
     """
 
     # Répertoires de base
@@ -25,6 +25,16 @@ def configure_logging(settings: Settings) -> None:
     os.makedirs(transcripts_dir, exist_ok=True)
     os.makedirs(pdf_dir, exist_ok=True)
     os.makedirs(audio_dir, exist_ok=True)
+
+    # Fichier de transcription "global" par jour (historique, optionnel)
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    daily_transcription_log_file = os.path.join(
+        transcripts_dir,
+        f"{current_date}-transcription.log",
+    )
+
+    # Fichier de log général de l'app
+    app_log_file = os.path.join(logs_dir, "pia-pia.log")
 
     # Niveau de log global
     level = logging.DEBUG if settings.debug else logging.INFO
@@ -38,6 +48,11 @@ def configure_logging(settings: Settings) -> None:
                 "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
                 "datefmt": "%Y-%m-%d %H:%M:%S",
             },
+            # Pour le logger 'transcription', on écrit déjà du JSON complet,
+            # donc on ne garde que le message.
+            "transcription": {
+                "format": "%(message)s",
+            },
         },
         "handlers": {
             "console": {
@@ -46,40 +61,59 @@ def configure_logging(settings: Settings) -> None:
                 "formatter": "standard",
                 "stream": "ext://sys.stdout",
             },
+            # Log général du bot : tout ce qui passe par le root + libs
+            "app_file": {
+                "class": "logging.FileHandler",
+                "level": level,
+                "formatter": "standard",
+                "filename": app_log_file,
+                "mode": "a",
+                "encoding": "utf-8",
+            },
+            # Logger dédié aux transcriptions (JSON lignes) "legacy" par jour
+            # (restera quasi vide maintenant que les sessions utilisent
+            #  leurs propres fichiers, mais on le garde si tu veux l’exploiter).
+            "transcription_file": {
+                "class": "logging.FileHandler",
+                "level": "INFO",
+                "formatter": "transcription",
+                "filename": daily_transcription_log_file,
+                "mode": "a",
+                "encoding": "utf-8",
+            },
         },
         "loggers": {
-            # Logger dédié aux transcriptions JSON.
-            # -> Pas de handler par défaut : DiscordSink ajoute/retire
-            #    son propre FileHandler par session.
+            # Logger dédié aux transcriptions (JSON lignes)
             "transcription": {
-                "handlers": [],
+                "handlers": ["transcription_file"],
                 "level": "INFO",
-                "propagate": False,  # on évite que le JSON aille dans la console
+                "propagate": False,
             },
-            # Réduire le bruit de certaines libs
+            # Réduire le bruit de certaines libs mais les écrire aussi dans app_file
             "discord": {
-                "handlers": ["console"],
+                "handlers": ["console", "app_file"],
                 "level": "WARNING",
                 "propagate": False,
             },
             "asyncio": {
-                "handlers": ["console"],
+                "handlers": ["console", "app_file"],
                 "level": "WARNING",
                 "propagate": False,
             },
             "httpx": {
-                "handlers": ["console"],
+                "handlers": ["console", "app_file"],
                 "level": "WARNING",
                 "propagate": False,
             },
             "httpcore": {
-                "handlers": ["console"],
+                "handlers": ["console", "app_file"],
                 "level": "WARNING",
                 "propagate": False,
             },
         },
+        # Root : tout le reste (ton code) → console + app_file
         "root": {
-            "handlers": ["console"],
+            "handlers": ["console", "app_file"],
             "level": level,
         },
     }
