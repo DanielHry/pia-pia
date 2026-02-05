@@ -1,49 +1,68 @@
-# ------------------------------
-# Image de base : Python 3.11 slim (léger, suffisant pour CPU)
-# ------------------------------
-FROM python:3.11-slim
+# =============================================================================
+# Pia-Pia Bot 🦜 — Dockerfile
+# =============================================================================
+# Build  : docker build -t pia-pia .
+# Run    : docker compose up -d
+# =============================================================================
 
-# ------------------------------
-# 1) Dépendances système
-#    - ffmpeg : pour manipuler l'audio
-#    - libopus0 : pour la voix Discord (py-cord[voice] en a besoin)
-# ------------------------------
+# ---------------------------------------------------------------------------
+# Stage 1 — Build : installer les dépendances avec uv
+# ---------------------------------------------------------------------------
+FROM python:3.12-slim-bookworm AS builder
+
+# Installer uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# Dépendances système pour compiler les packages Python (PyNaCl, etc.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
-    libopus0 \
- && rm -rf /var/lib/apt/lists/*
+    gcc \
+    libffi-dev \
+    libsodium-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# ------------------------------
-# 2) Dossier de travail /app
-# ------------------------------
 WORKDIR /app
 
-# ------------------------------
-# 3) Installation des dépendances Python
-#    On copie uniquement requirements.txt d'abord pour profiter du cache Docker
-# ------------------------------
-COPY requirements.txt .
+# Copier les fichiers de dépendances en premier (cache Docker)
+COPY pyproject.toml uv.lock ./
 
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
-    pip install --no-cache-dir -r requirements.txt
+# Sync des dépendances (sans le projet lui-même)
+RUN uv sync --frozen --no-dev --no-install-project
 
-# ------------------------------
-# 4) Copie du code de l'application
-#    (src/, config/, README, etc.)
-# ------------------------------
-COPY . .
+# Copier le code source
+COPY piapia/ ./piapia/
 
-# On s'assure que le dossier des logs existe (au cas où LOGS_DIR=.logs)
-RUN mkdir -p /app/.logs
+# Installer le projet
+RUN uv sync --frozen --no-dev
 
-# ------------------------------
-# 5) Variables d'env de base
-# ------------------------------
-ENV PYTHONUNBUFFERED=1
 
-# ------------------------------
-# 6) Commande par défaut :
-#    ton entrypoint actuel est `python -m src.main` 
-# ------------------------------
-CMD ["python", "-m", "src.main"]
+# ---------------------------------------------------------------------------
+# Stage 2 — Runtime : image légère avec ffmpeg
+# ---------------------------------------------------------------------------
+FROM python:3.12-slim-bookworm
+
+# Dépendances runtime
+#   - ffmpeg     : conversion audio (pydub)
+#   - libsodium  : chiffrement voix Discord (PyNaCl)
+#   - libopus    : codec audio voix Discord
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libsodium23 \
+    libopus0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Utilisateur non-root
+RUN useradd --create-home --shell /bin/bash piapia
+
+WORKDIR /app
+
+# Copier le venv et le code depuis le builder
+COPY --from=builder --chown=piapia:piapia /app /app
+
+# Créer les dossiers de données (seront montés en volume)
+RUN mkdir -p /app/.logs /app/config/player_maps \
+    && chown -R piapia:piapia /app/.logs /app/config
+
+USER piapia
+
+# Point d'entrée
+CMD ["/app/.venv/bin/python", "-m", "piapia"]

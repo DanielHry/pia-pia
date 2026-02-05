@@ -1,36 +1,39 @@
-# Git
-.git
-.gitignore
-
-# Environnements virtuels
-.venv/
-venv/
-
-# Caches Python
+# Python
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-*.so
 *.egg-info/
 dist/
 build/
 
-# IDE / tooling
+# Environnement
+.venv/
+.env
+
+# Logs & données de session (montés en volume)
+.logs/
+
+# Tests (pas besoin en production)
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
 .vscode/
 .idea/
-.pytest_cache/
-.mypy_cache/
+*.swp
+*.swo
 
-# Logs et données générées
-.logs/
+# Git
+.git/
+.gitignore
+
+# Docker (éviter récursion)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Divers
+*.md
 *.log
-tmp/
-data/
-
-# Autres trucs lourds éventuels
-*.wav
-*.mp3
-*.flac
-*.ogg
-*.pdf
+LICENSE

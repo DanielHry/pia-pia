@@ -1,367 +1,265 @@
-# Pia-Pia 🦜  
-Bot Discord de transcription pour jeux de rôle (JDR)
+# Pia-Pia 🦜 — Bot Discord d'enregistrement vocal
 
-Pia-Pia est un bot Discord qui écoute vos parties de JDR (D&D, Cthulhu, etc.), transcrit les échanges audio en texte, et peut générer un PDF de la session.  
-Chaque joueur est associé à un personnage, ce qui permet d’obtenir un compte-rendu clair : qui parle, quand, et quoi.
+Pia-Pia est un bot Discord conçu pour **rejoindre un salon vocal et enregistrer l'audio**.  
+Il archive des **fichiers par participant** et génère une **métadonnée de session** (`session_meta.json`) pour faciliter un traitement offline ultérieur (montage, diarisation, transcription, etc.).
+
+> Objectif : simple, robuste, et "record-only".
 
 ---
 
-## ✨ Fonctionnalités
+## Fonctionnalités
 
-- 🎙️ **Enregistrement audio** sur un salon vocal Discord
-- 🧠 **Transcription locale** avec [Faster-Whisper](https://github.com/guillaumekln/faster-whisper) (mode GPU ou CPU)
-- 📝 **Journal de session structuré** :
-  - un fichier `.log` JSONL par session (une ligne = une intervention)
-  - filtrage des segments vides et de certains bruits (sous-titrage fantôme & co)
-- 📚 **Génération de PDF** résumant la session (par ordre chronologique)
-- 🎭 **Mapping joueur → personnage** :
-  - via un fichier YAML (`player_map.yaml`)
-  - mis à jour automatiquement avec `/update_player_map`
-- 🎧 **Archivage audio brut (optionnel)** :
-  - un fichier WAV par utilisateur, par session
-  - utile pour ré-analyser une partie plus tard
-- 🐋 **Déploiement possible en Docker (CPU ou GPU)**.
+- ✅ `/connect` : rejoint ton salon vocal
+- ✅ `/record [label]` : démarre une session d'enregistrement
+- ✅ `/stop` : arrête la session en cours
+- ✅ `/disconnect` : quitte le salon vocal
+- ✅ `/update_player_map` : met à jour la liste joueurs/personnages (admin)
+- ✅ `/help` : affiche l'aide
+- ✅ Archivage audio **par utilisateur** (WAV, MP3, FLAC ou OGG)
+- ✅ Support **multi-serveur** (player maps par guilde)
+- ✅ **Durée maximale de session** configurable (avec avertissement 5 min avant)
+- ✅ **Rate limiting** sur les commandes (anti-spam)
+- ✅ `session_meta.json` : infos de session + joueurs + offsets temporels
+- ✅ Logs applicatifs avec rotation
+
 ---
 
-## 🧩 Prérequis
+## Prérequis
 
-- **Python 3.11** (recommandé)
-- Un compte Discord & un **bot Discord** enregistré  
-  → via le portail développeur Discord : https://discord.com/developers/applications
-- (Optionnel mais recommandé) Une **carte GPU** compatible CUDA pour Faster-Whisper
+### Côté Discord
 
-### PyTorch + CUDA
+1. Créer une application/bot sur le [portail développeurs Discord](https://discord.com/developers/applications)
+2. Ajouter le bot à ton serveur avec les permissions :
+   - `Connect`
+   - `Speak` *(même si Pia-Pia est self-mute)*
+   - `Use Voice Activity`
 
-Pour utiliser le GPU, installe PyTorch avec la bonne version de CUDA en suivant la doc officielle : https://pytorch.org/get-started/locally/
+### Côté machine
 
-Exemple (à adapter selon ta config) :
+- **Python 3.11+**
+- **uv** (gestionnaire de dépendances) — [installation](https://docs.astral.sh/uv/getting-started/installation/)
+- **ffmpeg** (optionnel, requis pour MP3/FLAC/OGG) — [installation](https://ffmpeg.org/download.html)
+
+---
+
+## Installation
+
+### Avec uv (recommandé)
 
 ```bash
-# Exemple (à adapter !) : CUDA 12.x
-pip install torch --index-url https://download.pytorch.org/whl/cu121
-```
-
-Ensuite, installe le reste des dépendances normalement.
-
----
-
-## 📦 Installation
-
-### 1. Cloner le dépôt
-
-```bash
-git clone https://github.com/DanielHry/pia-pia.git
+# Cloner le repo
+git clone https://github.com/ton-repo/pia-pia.git
 cd pia-pia
-```
 
-### 2. Créer un environnement virtuel
+# Installer les dépendances
+uv sync
 
-```bash
-python -m venv .venv
-
-source .venv/bin/activate  # Linux / macOS
-# ou
-.\.venv\Scripts\activate   # Windows
-```
-
-### 3. Installer les dépendances
-
-Si tu es en **CPU uniquement** :
-```bash
-pip install -r requirements.txt
-```
-
-Si tu veux utiliser le **GPU** :
-
-1. Installe d’abord torch avec la bonne roue CUDA (via la doc PyTorch).
-2. Puis installe le reste :
-
-```bash
-pip install -r requirements.txt --no-deps
-```
-
-(pour éviter de réinstaller torch en version CPU)
-
----
-
-## ⚙️ Configuration (.env)
-
-Un fichier `.env.example` est fourni à la racine du projet. Commence par le copier :
-
-```bash
+# Copier et configurer l'environnement
 cp .env.example .env
+# Éditer .env avec ton token Discord
 ```
 
-Ensuite, édite `.env` avec tes valeurs. Les variables principales :
+### Avec Docker
 
-### Discord
+```bash
+# Copier et configurer l'environnement
+cp .env.example .env
+# Éditer .env avec ton token Discord
 
-- `DISCORD_BOT_TOKEN` (obligatoire) Le token de ton bot, récupérable sur : https://discord.com/developers/applications
+# Build et lancement
+docker compose up -d
 
-### Logs & fichiers
+# Voir les logs
+docker compose logs -f
 
-- `LOGS_DIR` : Dossier racine pour les logs (ex: .logs).
-- `TRANSCRIPTS_SUBDIR` : Sous-dossier où sont écrits les fichiers de transcription de session (ex: transcripts → .logs/transcripts/).
-- `PDF_SUBDIR` : Sous-dossier où sont générés les PDF de sessions (ex: pdfs).
-- `AUDIO_ARCHIVE_SUBDIR` : Sous-dossier où sont stockés les WAV par utilisateur/sessions (ex: audio).
-- `ARCHIVE_AUDIO` : (true / false) Active ou non l’archivage WAV (prend de la place disque mais très utile pour reprocess).
+# Arrêter
+docker compose down
+```
 
-### Transcription / Whisper
+---
 
-- `TRANSCRIPTION_METHOD`
-    - `local` → Faster-Whisper en local (recommandé)
-    - `openai` → API OpenAI Whisper (si tu veux tester, nécessite OPENAI_API_KEY)
-- `WHISPER_MODEL`
+## Configuration
 
-    Nom du modèle, par ex :
+### Variables d'environnement
 
-    - `large-v3` (très précis, plus lourd)
-    - `medium`, `small`, etc.
+| Variable | Description | Défaut |
+|---|---|---|
+| `DISCORD_BOT_TOKEN` | Token Discord du bot | *(obligatoire)* |
+| `DEBUG` | Logs en mode debug | `False` |
+| `LOGS_DIR` | Dossier racine des logs | `.logs` |
+| `AUDIO_SESSIONS_SUBDIR` | Sous-dossier des sessions audio | `audio` |
+| `PLAYER_MAP_DIR` | Dossier des player maps par guilde | `config/player_maps` |
+| `AUDIO_FORMAT` | Format audio : `wav`, `mp3`, `flac`, `ogg` | `wav` |
+| `MAX_SESSION_DURATION_MINUTES` | Durée max d'une session (0 = illimité) | `240` |
 
-- `WHISPER_LANGUAGE`
+### Formats audio
 
-    Code langue ISO (`fr`, `en`, …) pour guider la transcription.
+| Format | Taille approximative | Qualité | Nécessite ffmpeg |
+|---|---|---|---|
+| `wav` | ~660 MB/h/utilisateur | Sans perte | Non |
+| `flac` | ~250 MB/h/utilisateur | Sans perte | Oui |
+| `mp3` | ~50 MB/h/utilisateur | Avec perte | Oui |
+| `ogg` | ~40 MB/h/utilisateur | Avec perte | Oui |
 
-- `WHISPER_COMPUTE_TYPE`
-    - sur GPU : souvent `float16` ou `bfloat16`
-    - sur CPU : `float32` (plus stable si pas de support half precision)
+---
 
-- `WHISPER_CACHE_DIR`
-    
-    Contrôle l’emplacement du cache Hugging Face utilisé pour les modèles Whisper :
+## Lancer le bot
 
-    - `default` → cache standard (`~/.cache/huggingface` ou équivalent)
+```bash
+# Avec uv
+uv run python -m piapia
 
-    - chemin absolu → par exemple `/app/data/hf_cache` (très pratique en Docker pour monter un volume et éviter de re-télécharger le modèle à chaque conteneur)
+# Avec le flag debug
+uv run python -m piapia --debug
+```
 
-    > Lorsque `TRANSCRIPTION_METHOD=local`, Pia-Pia **précharge le modèle Whisper au démarrage**. Si le modèle n’est pas encore présent dans le cache, il sera téléchargé à ce moment-là (le premier lancement peut donc être un peu long).
+---
 
-- `SILENCE_THRESHOLD`
+## Utilisation
 
-    Temps en secondes de silence avant de considérer qu’un locuteur a fini de parler (ex: `1.5`).
+### Commandes Discord
 
-- `MIN_AUDIO_DURATION`
-    
-    Durée minimale en secondes avant d’envoyer un segment à Whisper (ex: `0.3` ou `0.5`).
+| Commande | Description | Cooldown |
+|---|---|---|
+| `/connect` | Rejoint ton salon vocal | 10s |
+| `/record [label]` | Démarre l'enregistrement | 5s |
+| `/stop` | Arrête l'enregistrement | 5s |
+| `/disconnect` | Quitte le salon vocal | 10s |
+| `/update_player_map` | Met à jour les joueurs (admin) | 30s |
+| `/help` | Affiche l'aide | - |
 
-- `ENABLE_SUBTITLE_NOISE_FILTER` (`true` / `false`)
+### Workflow typique
 
-    Active le filtrage de certaines hallucinations de type “Sous-titrage FR ?”, etc.
+1. Rejoins un salon vocal sur Discord
+2. `/connect` — Pia-Pia te rejoint
+3. `/record Session JDR` — Démarre l'enregistrement avec un label
+4. *... ta session de jeu ...*
+5. `/stop` — Arrête et sauvegarde les fichiers
+6. `/disconnect` — Pia-Pia quitte le salon
 
+### Fichiers générés
 
-### Mapping joueurs / personnages
+```
+.logs/audio/2026-02-04_20-30-00_g123456789/
+├── user_111111111.mp3      # Audio du joueur 1
+├── user_222222222.mp3      # Audio du joueur 2
+├── user_333333333.mp3      # Audio du joueur 3
+└── session_meta.json       # Métadonnées de session
+```
 
-- `PLAYER_MAP_FILE_PATH`
+---
 
-    Chemin du fichier YAML de mapping (ex: config/player_map.yaml).
+## Player Map (multi-serveur)
 
-Ce YAML ressemble à quelque chose comme :
+Pia-Pia stocke une **player map** par serveur Discord : `user_id → {player, character}`.
+
+### Structure
+
+```
+config/player_maps/
+├── guild_123456789.yaml    # Serveur 1
+└── guild_987654321.yaml    # Serveur 2
+```
+
+### Format YAML
 
 ```yaml
-"252171234567891168":
-  player: "nom_joueur"
-  character: "NomDuPersonnage"
-"123456789012345678":
-  player: "autre_joueur"
-  character: "NomDuPersonnage"
+111111111:
+  player: "Alice"
+  character: "Elowen la Magicienne"
+222222222:
+  player: "Bob"
+  character: "Thorgar le Barbare"
 ```
 
-La commande `/update_player_map` permet de le générer / mettre à jour automatiquement à partir des membres présents sur la guilde.
+### Mise à jour
+
+La commande `/update_player_map` (réservée aux admins) rafraîchit automatiquement la liste depuis les membres du serveur.
 
 ---
 
-## 🚀 Lancer Pia-Pia
+## Tests
 
-Une fois l’environnement et le `.env` prêts :
 ```bash
-python -m src.main
-```
+# Installer les dépendances de dev
+uv sync --extra dev
 
-Pour activer le mode debug (logs plus verbeux) :
-```bash
-python -m src.main --debug
-```
+# Lancer les tests
+uv run pytest
 
-Pia-Pia se connecte alors à Discord et enregistre ses commandes slash.
+# Avec couverture
+uv run pytest --cov=piapia --cov-report=html
+```
 
 ---
 
-## 🎮 Commandes Discord
+## Architecture
 
-### `/help`
-
-Affiche un message d’aide récapitulant ce que sait faire Pia-Pia et les commandes disponibles.
-
-### `/connect`
-
-- Pia-Pia rejoint le **salon vocal** où tu te trouves.
-- Il ne commence pas à enregistrer tant que tu n’as pas lancé `/scribe`.
-
-### `/scribe`
-
-- Démarre une session de transcription pour la guilde :
-    - création d’un fichier .logs/transcripts/<timestamp>_g<guild>_session.log
-    - (optionnel) création des fichiers WAV dans .logs/audio/<session_id>/user_<id>.wav
-- Tant que la session est active :
-    - Pia-Pia écoute,
-    - segmente la parole par locuteur,
-    - envoie les segments au modèle Whisper,
-    - loggue les transcriptions ligne par ligne dans le fichier de session.
-
-### `/stop`
-
-- Arrête la session de transcription courante pour la guilde :
-    - le `DiscordSink` est stoppé proprement,
-    - les dernières transcriptions sont flushées.
-- Important : le fichier de session `.log` reste disponible pour `/generate_pdf`.
-
-### `/generate_pdf`
-
-- Lit le fichier de session le plus récent pour la guilde.
-- Construit une liste d’événements (`TranscriptionEvent`) :
-    - ordonnés par temps,
-    - filtrés (texte vide, bruit marqué `is_noise`, etc.).
-- Génère un PDF (ex: `.logs/pdfs/2025-12-05_20-45-12_session.pdf`).
-- Envoie ce PDF dans le canal où la commande a été appelée.
-
-### `/disconnect`
-
-- Pia-Pia quitte le salon vocal.
-- Nettoie proprement :
-    - les sinks,
-    - les états en mémoire liés à la guilde,
-    - (optionnel) ferme les fichiers WAV si archivage actif.
-
-### `/update_player_map`
-
-- Récupère les membres de la guilde.
-- Met à jour la `player_map` interne :
-    - `user_id -> { player: <pseudo>, character: <display_name> }`
-- Persiste le tout dans `config/player_map.yaml`.
-
-Pratique si vous avez de nouveaux joueurs ou si quelqu’un change son pseudo / display name.
+```
+piapia/
+├── __main__.py              # Point d'entrée
+├── bot/
+│   ├── piapia_bot.py        # Bot principal
+│   ├── helper.py            # Helper par guilde
+│   └── cogs/
+│       ├── audio_cog.py     # Commandes audio
+│       └── admin_cog.py     # Commandes admin
+├── config/
+│   ├── settings.py          # Configuration Pydantic
+│   └── logging_config.py    # Configuration logs
+├── domain/
+│   └── sessions.py          # Modèles de session
+├── sinks/
+│   ├── discord_sink.py      # Sink Discord (capture audio)
+│   └── audio_archiver.py    # Archivage WAV + conversion
+└── utils/
+    ├── commandline.py       # Arguments CLI
+    └── session_paths.py     # Chemins de session
+```
 
 ---
 
-## 🐋 Docker (optionnel)
+## Docker
 
-Pia-Pia peut tourner :
-
-- soit directement avec Python (`python -m src.main`),
-- soit via Docker, avec deux services définis dans `docker-compose.yml` :
-  - `pia-pia-cpu` (image basée sur `Dockerfile`),
-  - `pia-pia-gpu` (image basée sur `Dockerfile.gpu`).
-
-### 1. Build des images
-
-Depuis la racine du projet :
+### Build manuel
 
 ```bash
-# Image CPU
-docker compose build pia-pia-cpu
-
-# Image GPU
-docker compose build pia-pia-gpu
+docker build -t pia-pia .
 ```
 
-### 2. Service CPU
+### Volumes
 
-Usage typique (sans GPU, ou juste pour tester) :
+| Chemin conteneur | Description |
+|---|---|
+| `/app/.logs` | Sessions audio (à monter en volume) |
+| `/app/config/player_maps` | Player maps par guilde |
 
-```bash
-docker compose up -d pia-pia-cpu
-```
-
-Le service :
-- utilise les variables définies dans `.env` (`env_file: - .env`),
-- monte par défaut :
-    - `./data/logs` sur `/app/.logs` (logs + transcriptions + PDF),
-    - `./config` sur `/app/config` (dont `player_map.yaml`).
-
-### 3. Service GPU (recommandé pour large-v3)
-
-Dans ton .env, pense à mettre quelque chose comme :
-
-```bash
-TRANSCRIPTION_METHOD=local
-WHISPER_MODEL=large-v3
-WHISPER_LANGUAGE=fr
-WHISPER_COMPUTE_TYPE=float16
-
-# Important pour Docker GPU :
-WHISPER_CACHE_DIR=/app/data/hf_cache
-```
-
-Le `docker-compose.yml` monte ce cache dans un volume :
+### Exemple docker-compose.yml
 
 ```yaml
-volumes:
-  - ./data/hf_cache:/app/data/hf_cache
-```
-
-Au premier démarrage, Pia-Pia télécharge le modèle Whisper dans `./data/hf_cache` (sur l’hôte)
-
-Lancer le service GPU :
-```bash
-docker compose up -d pia-pia-gpu
-
-# ou
-
-docker run -d \
-  --name pia-pia-gpu \
-  --gpus '"device=0"' \         # en précisant le GPU ID
-  --env-file .env \
-  --restart unless-stopped \
-  -v $(pwd)/data/logs:/app/.logs \
-  -v $(pwd)/config:/app/config \
-  -v $(pwd)/data/hf_cache:/app/data/hf_cache \
-  pia-pia:gpu
+services:
+  pia-pia:
+    build: .
+    container_name: pia-pia
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./.logs:/app/.logs
+      - ./config/player_maps:/app/config/player_maps
 ```
 
 ---
 
-## 🧠 Whisper / Faster-Whisper
+## Licence
 
-Pia-Pia utilise Faster-Whisper, une implémentation optimisée du modèle Whisper d’OpenAI.
-
-- Git Whisper original : https://github.com/openai/whisper
-- Git Faster-Whisper : https://github.com/guillaumekln/faster-whisper
-
-Les paramètres principaux contrôlés via `.env` :
-
-- `WHISPER_MODEL` : taille/précision du modèle (`base`, `small`, `medium`, `large-v3`, …).
-- `WHISPER_LANGUAGE` : langue principale (`fr`, `en`, …).
-- `WHISPER_COMPUTE_TYPE` : type de calcul (`float16`, `float32`, `bfloat16` …).
-- `TRANSCRIPTION_METHOD` : `local` ou `openai`.
-- `WHISPER_CACHE_DIR` : emplacement du cache Hugging Face pour les modèles (très utile en Docker pour monter un volume et éviter les re-téléchargements).
+MIT License — voir [LICENSE](LICENSE)
 
 ---
 
-## ⚠️ Limitations connues
+## Crédits
 
-- Testé principalement :
-    - sur 1 guilde à la fois,
-    - avec 4–8 joueurs,
-    - en français (`WHISPER_LANGUAGE=fr`).
-- Le modèle `large-v3` est précis mais gourmand :
-    - prévoir une bonne carte GPU si tu veux suivre plusieurs heures de session.
-- Certaines hallucinations de type _“Sous-titrage FR ?”_ sont filtrées, mais il peut en rester quelques-unes selon le bruit et le micro.
+Projet développé pour l'enregistrement vocal Discord 🦜
 
----
-
-## 🗺️ Idées / Roadmap (futures versions)
-
-- Nommer les sessions (`/scribe game:"…" session:"…"`)
-- Export Markdown / Obsidian des journaux
-- Résumés automatiques de sessions (MJ / in-universe)
-- Marqueurs de scène (`/bookmark`) durant la partie
-- Interface web minimale pour lister les sessions & PDF
-- Docker + image publique pour déploiement simplifié
-
----
-
-## 📜 Licence & crédits
-
-- Whisper © OpenAI
-- Faster-Whisper © Guillaume Klein
-- MIT license
+- [py-cord](https://github.com/Pycord-Development/pycord) — Discord API wrapper
+- [pydub](https://github.com/jiaaro/pydub) — Manipulation audio
+- [ffmpeg](https://ffmpeg.org/) — Conversion audio

@@ -1,0 +1,22 @@
+# =============================================================================
+# Pia-Pia Bot 🦜 — Docker Compose
+# =============================================================================
+# Lancement : docker compose up -d
+# Logs      : docker compose logs -f
+# Arrêt     : docker compose down
+# Rebuild   : docker compose up -d --build
+# =============================================================================
+
+services:
+  pia-pia:
+    build: .
+    container_name: pia-pia
+    restart: unless-stopped
+    env_file: .env
+
+    volumes:
+      # Sessions audio (WAV/MP3/FLAC/OGG) — persistées sur l'hôte
+      - ./.logs:/app/.logs
+
+      # Player maps par guilde — persistées sur l'hôte
+      - ./config/player_maps:/app/config/player_maps
