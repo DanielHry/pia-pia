@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class BotHelper:
     """
-    Helper lié à une guilde Discord.
+    Helper tied to a Discord guild.
     """
 
     def __init__(self, bot: discord.Client) -> None:
@@ -24,8 +24,8 @@ class BotHelper:
     # ------------------------------------------------------------------ #
     def set_vc(self, voice_client: Optional[discord.VoiceClient]) -> None:
         """
-        Associe (ou détache) un VoiceClient à ce helper.
-        Quand on perd le VC, on nettoie aussi les états audio internes.
+        Attach (or detach) a VoiceClient to this helper.
+        When we lose the VC, we also reset internal audio state.
         """
         self.vc = voice_client
         if voice_client is None:

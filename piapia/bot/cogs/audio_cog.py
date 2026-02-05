@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class AudioCog(commands.Cog):
     """
-    Commandes liées à la voix / audio :
+    Voice / audio commands:
       - /connect
       - /record
       - /stop
@@ -29,13 +29,13 @@ class AudioCog(commands.Cog):
     # ------------------------------------------------------------------ #
     @discord.slash_command(
         name="connect",
-        description="Ajoute Pia-Pia à ton salon vocal.",
+        description="Bring Pia-Pia into your voice channel.",
     )
     @commands.cooldown(1, 10, commands.BucketType.guild)
     async def connect(self, ctx: discord.ApplicationContext) -> None:
         if not self.bot._is_ready:
             await ctx.respond(
-                "Ahem, Pia-Pia ajuste encore ses plumes… Réessaie dans un instant.",
+                "Ahem, Pia-Pia is still fluffing its feathers… Try again in a moment.",
                 ephemeral=True,
             )
             return
@@ -43,15 +43,15 @@ class AudioCog(commands.Cog):
         author_vc = ctx.author.voice
         if not author_vc:
             await ctx.respond(
-                "Je ne t'entends pas, aventurier : tu n'es pas dans un salon vocal.",
+                "I can't hear you, adventurer — you're not in a voice channel.",
                 ephemeral=True,
             )
             return
 
-        # Déjà connecté ?
+        # Already connected?
         if self.bot.guild_to_helper.get(ctx.guild_id) is not None:
             await ctx.respond(
-                "Je suis déjà dans une autre taverne (un autre salon vocal). 🦜",
+                "I'm already in another tavern (another voice channel).",
                 ephemeral=True,
             )
             return
@@ -65,13 +65,13 @@ class AudioCog(commands.Cog):
                 vc = await author_vc.channel.connect(timeout=15, reconnect=True)
             except IndexError:
                 await ctx.respond(
-                    "Impossible de me connecter : Discord ne m'a pas donné les bons modes audio.",
+                    "I couldn't connect: Discord didn't give me the right audio modes.",
                     ephemeral=True,
                 )
                 return
             except Exception as e:
-                logger.exception("Erreur lors de la connexion au vocal : %s", e)
-                await ctx.respond(f"Une erreur inattendue est survenue : {e}", ephemeral=True)
+                logger.exception("Error while connecting to voice: %s", e)
+                await ctx.respond(f"An unexpected error occurred: {e}", ephemeral=True)
                 return
 
             helper: Optional[BotHelper] = self.bot.guild_to_helper.get(guild_id)
@@ -83,17 +83,17 @@ class AudioCog(commands.Cog):
             helper.set_vc(vc)
 
             await ctx.respond(
-                "Pia-Pia est là ! 🦜✨ Je m'installe et j'écoute.",
+                "Pia-Pia is here! 🦜✨ Settling in and listening.",
                 ephemeral=False,
             )
 
-            # On mute le bot lui-même dans le vocal
+            # Mute the bot itself in voice
             await ctx.guild.change_voice_state(channel=author_vc.channel, self_mute=True)
 
         except Exception:
-            logger.exception("Exception dans /connect")
+            logger.exception("Exception in /connect")
             await ctx.respond(
-                "Une erreur inattendue est survenue pendant la connexion.",
+                "An unexpected error occurred while connecting.",
                 ephemeral=True,
             )
 
@@ -102,7 +102,7 @@ class AudioCog(commands.Cog):
     # ------------------------------------------------------------------ #
     @discord.slash_command(
         name="record",
-        description="Démarre une session d'enregistrement audio.",
+        description="Start an audio recording session.",
     )
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def record(self, ctx: discord.ApplicationContext, label: Optional[str] = None) -> None:
@@ -111,7 +111,7 @@ class AudioCog(commands.Cog):
 
         if not author_vc:
             await ctx.respond(
-                f"Rejoins un salon vocal, puis appelle-moi avec {connect_text}.",
+                f"Join a voice channel, then summon me with {connect_text}.",
                 ephemeral=True,
             )
             return
@@ -119,31 +119,31 @@ class AudioCog(commands.Cog):
         helper = self.bot.guild_to_helper.get(ctx.guild_id)
         if not helper or not helper.vc:
             await ctx.respond(
-                f"Je ne suis pas encore dans ta taverne. Invite-moi avec {connect_text}.",
+                f"I'm not in your tavern yet. Invite me with {connect_text}.",
                 ephemeral=True,
             )
             return
 
         if self.bot.current_sink_by_guild.get(ctx.guild_id) is not None:
             await ctx.respond(
-                "Une session est déjà active dans cette guilde. Termine-la avec /stop.",
+                "A session is already active on this server. Finish it with /stop.",
                 ephemeral=True,
             )
             return
 
         await ctx.defer(ephemeral=False)
 
-        self.bot.start_record_only_session(ctx, label=label)
+        self.bot.start_record_session(ctx, label=label)
 
         if self.bot.current_sink_by_guild.get(ctx.guild_id) is None:
             await ctx.followup.send(
-                "Je n'ai pas réussi à démarrer l'enregistrement 😢 (regarde les logs).",
+                "I couldn't start recording 😢 (check the logs).",
                 ephemeral=True,
             )
             return
         
         await ctx.followup.send(
-            f"Enregistrement démarré ! Session: `{self.bot.current_session_by_guild[ctx.guild_id].session_id}`",
+            f"Recording started! 🎙️ Session: `{self.bot.current_session_by_guild[ctx.guild_id].session_id}`",
             ephemeral=False,
         )
 
@@ -152,7 +152,7 @@ class AudioCog(commands.Cog):
     # ------------------------------------------------------------------ #
     @discord.slash_command(
         name="stop",
-        description="Arrête la session d'enregistrement en cours.",
+        description="Stop the current recording session.",
     )
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def stop(self, ctx: discord.ApplicationContext) -> None:
@@ -160,20 +160,20 @@ class AudioCog(commands.Cog):
         helper = self.bot.guild_to_helper.get(guild_id)
 
         if not helper or not helper.vc:
-            await ctx.respond("Je ne suis pas dans ta taverne en ce moment.", ephemeral=True)
+            await ctx.respond("I'm not in your tavern right now.", ephemeral=True)
             return
 
         if self.bot.current_sink_by_guild.get(guild_id) is None:
-            await ctx.respond("Aucune session active à arrêter. 😐", ephemeral=True)
+            await ctx.respond("No active session to stop. 😐", ephemeral=True)
             return
 
         await ctx.trigger_typing()
 
-        # stop_recording() va déclencher le callback du sink côté Discord
+        # stop_recording() triggers the sink callback on the Discord side
         self.bot.stop_current_session(ctx)
 
         await ctx.respond(
-            "Pia-Pia repose sa plume. 🖋️ Session stoppée.",
+            "Pia-Pia sets down its quill. 🖋️ Session stopped.",
             ephemeral=False,
         )
 
@@ -182,7 +182,7 @@ class AudioCog(commands.Cog):
     # ------------------------------------------------------------------ #
     @discord.slash_command(
         name="disconnect",
-        description="Fait quitter le salon vocal à Pia-Pia (stoppe la session si besoin).",
+        description="Make Pia-Pia leave the voice channel (stops the session if needed).",
     )
     @commands.cooldown(1, 10, commands.BucketType.guild)
     async def disconnect(self, ctx: discord.ApplicationContext) -> None:
@@ -191,7 +191,7 @@ class AudioCog(commands.Cog):
 
         if not helper or not helper.vc:
             await ctx.respond(
-                "On dirait que je ne suis pas dans ton groupe… 🤔",
+                "Looks like I'm not with your party… 🤔",
                 ephemeral=True,
             )
             return
@@ -200,7 +200,7 @@ class AudioCog(commands.Cog):
         await self.bot.force_disconnect(ctx)
 
         await ctx.respond(
-            "Pia-Pia plie bagage ! 📖 À la prochaine aventure !",
+            "Pia-Pia packs up! 📖 See you on the next adventure!",
             ephemeral=False,
         )
 
@@ -212,7 +212,7 @@ class AudioCog(commands.Cog):
     ) -> None:
         if isinstance(error, commands.CommandOnCooldown):
             await ctx.respond(
-                f"Doucement aventurier ! Réessaie dans {error.retry_after:.0f}s. ⏳",
+                f"Easy there, adventurer! Try again in {error.retry_after:.0f}s. ⏳",
                 ephemeral=True,
             )
         else:

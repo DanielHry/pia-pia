@@ -9,17 +9,54 @@ logger = logging.getLogger(__name__)
 
 
 class AudioArchiver:
-    """
-    Enregistre l'audio brut de chaque utilisateur dans un fichier WAV séparé,
-    puis convertit au format cible (mp3, flac, ogg…) à la fermeture.
+    """Per-user audio session archiver.
 
-    Stratégie :
-      - Pendant la session : écriture WAV (streaming fiable, pas de perte si crash).
-      - À close() : conversion vers le format cible via pydub, suppression du WAV source.
-      - Si le format cible est "wav", aucune conversion.
+    `AudioArchiver` writes raw PCM audio for each user into a dedicated WAV file
+    during a recording session, then optionally converts each WAV to a target
+    format when the session is finalized.
 
-    Arborescence :
-      base_dir/session_id/user_<user_id>.<format>
+    Design
+    ------
+    - Streaming-friendly: audio is written incrementally to WAV files during the
+      session (simple, reliable, and tolerant to interruptions).
+    - Best-effort finalization: on `close()`, all WAV files are closed and then
+      converted to the requested output format (e.g., mp3, flac, ogg).
+    - Safe cleanup: a source WAV is deleted only if its conversion succeeds. If
+      conversion fails (or conversion tooling is unavailable), the WAV is kept.
+
+    Output layout
+    -------------
+    Files are stored under a session directory:
+
+        {base_dir}/{session_id}/user_{user_id}.{format}
+
+    During the session, files are always written as WAV. After `close()`, the final
+    artifacts are either:
+    - WAV files (when `audio_format="wav"` or conversion cannot be performed), or
+    - Converted files alongside removed source WAVs (when conversion succeeds).
+
+    Parameters
+    ----------
+    base_dir:
+        Root directory where session folders are created.
+    session_id:
+        Unique identifier for the current recording session; used as a folder name.
+    channels:
+        Number of audio channels written to disk (e.g., 2 for stereo).
+    sample_width:
+        Sample width in bytes (e.g., 2 for 16-bit PCM).
+    sample_rate:
+        Sample rate in Hz (e.g., 48000).
+    audio_format:
+        Target output format (case-insensitive). Common values include ``"wav"``,
+        ``"mp3"``, ``"flac"``, and ``"ogg"``.
+
+    Notes
+    -----
+    - Conversion uses `pydub` (and therefore FFmpeg). If `pydub` is missing, the
+      archiver will log an error and keep WAV files.
+    - The archiver tracks the total number of PCM bytes processed across all users,
+      useful for diagnostics and logging.
     """
 
     def __init__(
@@ -47,7 +84,7 @@ class AudioArchiver:
 
     @property
     def bytes_written(self) -> int:
-        """Nombre total d'octets PCM écrits depuis le début de la session."""
+        """Total number of PCM bytes written since the start of the session."""
         return self._bytes_written
 
     def _get_or_open_file(self, user_id: int) -> wave.Wave_write:
@@ -65,15 +102,16 @@ class AudioArchiver:
 
     def append(self, user_id: int, data: bytes) -> None:
         """
-        Ajoute des frames PCM pour un utilisateur donné.
-        Appelé dans le thread de traitement audio (pas dans l'event loop).
+        Append PCM frames for a given user.
+
+        Called from the audio processing thread (not in the event loop).
         """
         wf = self._get_or_open_file(user_id)
         wf.writeframes(data)
         self._bytes_written += len(data)
 
     def _convert_to_target_format(self) -> None:
-        """Convertit tous les WAV de la session vers le format cible via pydub."""
+        """Convert all WAV files in the session to the target format via pydub."""
         if self.audio_format == "wav":
             return
 
@@ -81,8 +119,8 @@ class AudioArchiver:
             from pydub import AudioSegment
         except ImportError:
             logger.error(
-                "pydub n'est pas installé, impossible de convertir en %s. "
-                "Les fichiers WAV sont conservés.",
+                "pydub is not installed; cannot convert to %s. "
+                "WAV files will be kept.",
                 self.audio_format,
             )
             return
@@ -100,25 +138,24 @@ class AudioArchiver:
                 audio.export(target_path, format=self.audio_format)
                 os.remove(wav_path)
                 logger.debug(
-                    "Converti %s -> %s",
+                    "Converted %s -> %s",
                     filename,
                     target_name,
                 )
             except Exception as e:
                 logger.error(
-                    "Erreur lors de la conversion de %s en %s : %s. "
-                    "Le fichier WAV est conservé.",
+                    "Error converting %s to %s: %s. WAV file will be kept.",
                     filename,
                     self.audio_format,
                     e,
                 )
 
     def close(self) -> None:
-        """Ferme tous les fichiers WAV ouverts, puis convertit au format cible."""
+        """Close all open WAV files, then convert to the target format."""
         if not self._files:
             return
          
-        # 1) Fermer tous les WAV
+        # 1) Close all WAVs
         for wf in self._files.values():
             try:
                 wf.close()
@@ -126,15 +163,15 @@ class AudioArchiver:
                 pass
         self._files.clear()
 
-        # 2) Conversion (best-effort)
+        # 2) Conversion (best effort)
         try:
             self._convert_to_target_format()
         except Exception as e:
-            logger.error("Erreur lors de la conversion audio : %s", e)
+            logger.error("Error during audio conversion: %s", e)
 
         if self.audio_format != "wav":
             logger.info(
-                "Conversion audio terminée pour la session %s (format: %s, %d octets PCM traités).",
+                "Audio conversion completed for session %s (format: %s, %d PCM bytes processed).",
                 self.session_id,
                 self.audio_format,
                 self._bytes_written,

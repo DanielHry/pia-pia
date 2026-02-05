@@ -20,15 +20,46 @@ SinkMode = Literal["record_only"]
 
 
 class DiscordSink(Sink):
-    """Sink Discord pour l'enregistrement audio.
+    """Audio sink for Discord voice recording.
 
-    Objectif de cette version : **record-only**.
-    Toute la voie "live transcription" a été retirée.
+    `DiscordSink` receives per-user PCM audio frames from a Discord voice client and
+    delegates persistence to an `AudioArchiver`. It is designed to be instantiated
+    per guild to keep recording state isolated across servers.
 
-    Compat :
-      - conserve la signature historique (audio_buffer/transcriber/output_queue/log_path/mode),
-        mais ces paramètres sont ignorés.
-      - si `mode="live"` est fourni, on log un warning et on force `record_only`.
+    Behavior
+    --------
+    - Operates in **record-only** mode.
+    - If another mode is provided, the sink will emit a warning and fall back to
+      `record_only`.
+    - Tracks lightweight session metadata (start timestamp and per-user first packet
+      offsets) which can be written to a JSON file when `session_meta_path` is set.
+    - Thread-safe: `write()` may be called from the voice receive thread; archiver
+      operations are protected by a lock.
+
+    Parameters
+    ----------
+    settings:
+        Runtime settings (paths, formats, limits, etc.).
+    guild_id:
+        Discord guild identifier for which this sink is used.
+    mode:
+        Requested sink mode. Only ``"record_only"`` is supported; other values are
+        coerced to ``"record_only"`` with a warning.
+    filters:
+        Optional audio filters applied to incoming frames. Defaults to `default_filters`.
+    player_map:
+        Optional mapping ``user_id -> metadata`` (e.g., display name) used for labeling
+        tracks and metadata.
+    audio_archiver:
+        Component responsible for writing/closing audio files. If None, no audio is
+        written, but metadata tracking still occurs.
+    session_meta_path:
+        Optional path where session metadata (JSON) will be persisted.
+
+    Notes
+    -----
+    - The sink does not assume it owns the lifecycle of the voice connection; it only
+      reacts to frames provided by the caller and finalizes the archiver when requested.
     """
 
     def __init__(
@@ -52,11 +83,10 @@ class DiscordSink(Sink):
         self.settings = settings
         self.player_map: Dict[int, Dict[str, str]] = player_map or {}
 
-        # On force record_only : la transcription a été supprimée.
+        # Enforce record_only: this sink only supports recording.
         if mode != "record_only":
             logger.warning(
-                "DiscordSink: mode=%s demandé mais non supporté (transcription supprimée). "
-                "Bascule en record_only (guild=%s).",
+                "DiscordSink: mode=%s was requested but is not supported. Switching to record_only (guild=%s).",
                 mode,
                 guild_id,
             )
@@ -65,36 +95,36 @@ class DiscordSink(Sink):
         self.audio_archiver = audio_archiver
         self.session_meta_path = session_meta_path
 
-        # Métadonnées utiles (timestamps) – conservées car peu coûteuses et pratiques.
+        # Useful metadata (timestamps) — kept because it's cheap and handy.
         self.start_ts: Optional[float] = None
         self.user_first_offset_seconds: Dict[int, float] = {}
 
-        # `write()` peut être appelé depuis un thread voice (Pycord) => lock pour l'archiver.
+        # `write()` may be called from a voice thread (Pycord) => lock the archiver.
         self._archiver_lock = threading.Lock()
 
         if self.audio_archiver is None:
             logger.info(
-                "DiscordSink démarré sans AudioArchiver (aucun fichier audio ne sera écrit) (guild=%s).",
+                "DiscordSink started without AudioArchiver (no audio files will be written) (guild=%s).",
                 self.guild_id,
             )
         else:
             logger.debug(
-                "DiscordSink démarré en mode record_only (guild=%s).", self.guild_id
+                "DiscordSink started in record_only mode (guild=%s).", self.guild_id
             )
 
     @Filters.container
     def write(self, data: bytes, user_id: int) -> None:
-        """Appelé par Discord quand un utilisateur envoie de l'audio."""
+        """Called by Discord when a user sends audio."""
         if not data:
             return
 
         ts = time.time()
 
-        # Init start_ts au tout premier paquet (tous users confondus)
+        # Initialize start_ts on the very first packet received (all users combined).
         if self.start_ts is None:
             self.start_ts = ts
 
-        # Offset par user au tout premier paquet
+        # Store each user's offset at their first received packet.
         if user_id not in self.user_first_offset_seconds and self.start_ts is not None:
             self.user_first_offset_seconds[user_id] = max(0.0, ts - self.start_ts)
 
@@ -119,7 +149,7 @@ class DiscordSink(Sink):
             },
         }
 
-        # Optionnel : injecter un snapshot du mapping player/character si fourni
+        # Optional: inject a snapshot of the player/character mapping if provided
         if self.player_map:
             extras["player_map"] = {
                 str(uid): meta for uid, meta in self.player_map.items()
@@ -149,7 +179,7 @@ class DiscordSink(Sink):
             logger.error("Error writing session meta extras: %s", e)
 
     def cleanup(self) -> None:
-        """Appelée par Discord quand le sink doit être fermé."""
+        """Called by Discord when the sink must be closed."""
         logger.debug("Cleaning up DiscordSink for guild %s.", self.guild_id)
 
         # Meta extras : best-effort

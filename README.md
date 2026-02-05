@@ -1,78 +1,76 @@
-# Pia-Pia 🦜 — Bot Discord d'enregistrement vocal
+# Pia-Pia 🦜 — Discord Voice Recording Bot
 
-Pia-Pia est un bot Discord conçu pour **rejoindre un salon vocal et enregistrer l'audio**.  
-Il archive des **fichiers par participant** et génère une **métadonnée de session** (`session_meta.json`) pour faciliter un traitement offline ultérieur (montage, diarisation, transcription, etc.).
-
-> Objectif : simple, robuste, et "record-only".
+Pia-Pia is a Discord bot designed to **join a voice channel and record audio**.  
+It archives **one file per participant** and generates **session metadata** (`session_meta.json`) to make later offline processing easier (editing, diarization, transcription, etc.).
 
 ---
 
-## Fonctionnalités
+## Features
 
-- ✅ `/connect` : rejoint ton salon vocal
-- ✅ `/record [label]` : démarre une session d'enregistrement
-- ✅ `/stop` : arrête la session en cours
-- ✅ `/disconnect` : quitte le salon vocal
-- ✅ `/update_player_map` : met à jour la liste joueurs/personnages (admin)
-- ✅ `/help` : affiche l'aide
-- ✅ Archivage audio **par utilisateur** (WAV, MP3, FLAC ou OGG)
-- ✅ Support **multi-serveur** (player maps par guilde)
-- ✅ **Durée maximale de session** configurable (avec avertissement 5 min avant)
-- ✅ **Rate limiting** sur les commandes (anti-spam)
-- ✅ `session_meta.json` : infos de session + joueurs + offsets temporels
-- ✅ Logs applicatifs avec rotation
+- ✅ `/connect` : joins your voice channel
+- ✅ `/record [label]` : starts a recording session
+- ✅ `/stop` : stops the current session
+- ✅ `/disconnect` : leaves the voice channel
+- ✅ `/update_player_map` : refreshes the player/character list (admin)
+- ✅ `/help` : shows help
+- ✅ Per-user audio archiving (WAV, MP3, FLAC, or OGG)
+- ✅ Multi-server support (one player map per guild)
 
 ---
 
-## Prérequis
+## Prerequisites
 
-### Côté Discord
+### Discord side
 
-1. Créer une application/bot sur le [portail développeurs Discord](https://discord.com/developers/applications)
-2. Ajouter le bot à ton serveur avec les permissions :
+1. Create an application/bot in the [Discord Developer Portal](https://discord.com/developers/applications)
+2. Add the bot to your server with these permissions:
    - `Connect`
-   - `Speak` *(même si Pia-Pia est self-mute)*
+   - `Speak` *(even if Pia-Pia is self-muted)*
    - `Use Voice Activity`
 
-### Côté machine
+### Machine side
 
 - **Python 3.11+**
-- **uv** (gestionnaire de dépendances) — [installation](https://docs.astral.sh/uv/getting-started/installation/)
-- **ffmpeg** (optionnel, requis pour MP3/FLAC/OGG) — [installation](https://ffmpeg.org/download.html)
+- **uv** (dependency manager) — [Astral documentation](https://docs.astral.sh/uv/getting-started/installation/)
+- **ffmpeg** (optional, required for MP3/FLAC/OGG) — [ffmpeg downloads](https://ffmpeg.org/download.html)
 
 ---
 
-## Installation
-
-### Avec uv (recommandé)
+## Installation and run
 
 ```bash
-# Cloner le repo
-git clone https://github.com/ton-repo/pia-pia.git
+# Clone the repo
+git clone https://github.com/your-repo/pia-pia.git
 cd pia-pia
 
-# Installer les dépendances
-uv sync
-
-# Copier et configurer l'environnement
+# Copy and configure the environment
 cp .env.example .env
-# Éditer .env avec ton token Discord
+# Edit .env with your Discord token
 ```
 
-### Avec Docker
+### With uv (recommended)
 
 ```bash
-# Copier et configurer l'environnement
-cp .env.example .env
-# Éditer .env avec ton token Discord
+# Install dependencies
+uv sync
 
-# Build et lancement
+# Run
+uv run python -m piapia
+
+# With debug flag
+uv run python -m piapia --debug
+```
+
+### With Docker
+
+```bash
+# Build and run
 docker compose up -d
 
-# Voir les logs
+# View logs
 docker compose logs -f
 
-# Arrêter
+# Stop
 docker compose down
 ```
 
@@ -80,114 +78,92 @@ docker compose down
 
 ## Configuration
 
-### Variables d'environnement
+### Environment variables
 
-| Variable | Description | Défaut |
+| Variable | Description | Default |
 |---|---|---|
-| `DISCORD_BOT_TOKEN` | Token Discord du bot | *(obligatoire)* |
-| `DEBUG` | Logs en mode debug | `False` |
-| `LOGS_DIR` | Dossier racine des logs | `.logs` |
-| `AUDIO_SESSIONS_SUBDIR` | Sous-dossier des sessions audio | `audio` |
-| `PLAYER_MAP_DIR` | Dossier des player maps par guilde | `config/player_maps` |
-| `AUDIO_FORMAT` | Format audio : `wav`, `mp3`, `flac`, `ogg` | `wav` |
-| `MAX_SESSION_DURATION_MINUTES` | Durée max d'une session (0 = illimité) | `240` |
+| `DISCORD_BOT_TOKEN` | Bot Discord token | *(required)* |
+| `DEBUG` | Debug logging | `False` |
+| `LOGS_DIR` | Logs root folder | `.logs` |
+| `AUDIO_SESSIONS_SUBDIR` | Audio sessions subfolder | `audio` |
+| `PLAYER_MAP_DIR` | Player maps folder (per guild) | `config/player_maps` |
+| `AUDIO_FORMAT` | Audio format: `wav`, `mp3`, `flac`, `ogg` | `mp3` |
+| `MAX_SESSION_DURATION_MINUTES` | Max session duration (0 = unlimited) | `240` |
 
-### Formats audio
-
-| Format | Taille approximative | Qualité | Nécessite ffmpeg |
-|---|---|---|---|
-| `wav` | ~660 MB/h/utilisateur | Sans perte | Non |
-| `flac` | ~250 MB/h/utilisateur | Sans perte | Oui |
-| `mp3` | ~50 MB/h/utilisateur | Avec perte | Oui |
-| `ogg` | ~40 MB/h/utilisateur | Avec perte | Oui |
 
 ---
 
-## Lancer le bot
+## Usage
 
-```bash
-# Avec uv
-uv run python -m piapia
+### Discord commands
 
-# Avec le flag debug
-uv run python -m piapia --debug
-```
-
----
-
-## Utilisation
-
-### Commandes Discord
-
-| Commande | Description | Cooldown |
+| Command | Description | Cooldown |
 |---|---|---|
-| `/connect` | Rejoint ton salon vocal | 10s |
-| `/record [label]` | Démarre l'enregistrement | 5s |
-| `/stop` | Arrête l'enregistrement | 5s |
-| `/disconnect` | Quitte le salon vocal | 10s |
-| `/update_player_map` | Met à jour les joueurs (admin) | 30s |
-| `/help` | Affiche l'aide | - |
+| `/connect` | Join your voice channel | 10s |
+| `/record [label]` | Start recording | 5s |
+| `/stop` | Stop recording | 5s |
+| `/disconnect` | Leave the voice channel | 10s |
+| `/update_player_map` | Refresh players (admin) | 30s |
+| `/help` | Show help | - |
 
-### Workflow typique
+### Typical workflow
 
-1. Rejoins un salon vocal sur Discord
-2. `/connect` — Pia-Pia te rejoint
-3. `/record Session JDR` — Démarre l'enregistrement avec un label
-4. *... ta session de jeu ...*
-5. `/stop` — Arrête et sauvegarde les fichiers
-6. `/disconnect` — Pia-Pia quitte le salon
+1. Join a voice channel on Discord
+2. `/connect` — Pia-Pia joins you
+3. `/record TTRPG Session` — Start recording with a label
+4. *... play session ...*
+5. `/stop` — Stop and save files
+6. `/disconnect` — Pia-Pia leaves the channel
 
-### Fichiers générés
+### Generated files
 
 ```
 .logs/audio/2026-02-04_20-30-00_g123456789/
-├── user_111111111.mp3      # Audio du joueur 1
-├── user_222222222.mp3      # Audio du joueur 2
-├── user_333333333.mp3      # Audio du joueur 3
-└── session_meta.json       # Métadonnées de session
+├── user_111111111.mp3      # Player 1 audio
+├── user_222222222.mp3      # Player 2 audio
+├── user_333333333.mp3      # Player 3 audio
+└── session_meta.json       # Session metadata
 ```
 
 ---
 
-## Player Map (multi-serveur)
+## Player Map (multi-server)
 
-Pia-Pia stocke une **player map** par serveur Discord : `user_id → {player, character}`.
+Pia-Pia stores one **player map** per Discord server: `user_id → {player, character}`.
 
 ### Structure
 
 ```
 config/player_maps/
-├── guild_123456789.yaml    # Serveur 1
-└── guild_987654321.yaml    # Serveur 2
+├── guild_123456789.yaml    # Server 1
+└── guild_987654321.yaml    # Server 2
 ```
 
-### Format YAML
+### YAML format
 
 ```yaml
 111111111:
   player: "Alice"
-  character: "Elowen la Magicienne"
+  character: "Elowen the Wizard"
 222222222:
   player: "Bob"
-  character: "Thorgar le Barbare"
+  character: "Thorgar the Barbarian"
 ```
 
-### Mise à jour
-
-La commande `/update_player_map` (réservée aux admins) rafraîchit automatiquement la liste depuis les membres du serveur.
+> The `/update_player_map` command (typically admin-only) refreshes the list from the server members.
 
 ---
 
 ## Tests
 
 ```bash
-# Installer les dépendances de dev
+# Install dev dependencies
 uv sync --extra dev
 
-# Lancer les tests
+# Run tests
 uv run pytest
 
-# Avec couverture
+# With coverage
 uv run pytest --cov=piapia --cov-report=html
 ```
 
@@ -197,55 +173,24 @@ uv run pytest --cov=piapia --cov-report=html
 
 ```
 piapia/
-├── __main__.py              # Point d'entrée
+├── __main__.py              # Entry point
 ├── bot/
-│   ├── piapia_bot.py        # Bot principal
-│   ├── helper.py            # Helper par guilde
+│   ├── piapia_bot.py        # Main bot
+│   ├── helper.py            # Per-guild helper
 │   └── cogs/
-│       ├── audio_cog.py     # Commandes audio
-│       └── admin_cog.py     # Commandes admin
+│       ├── audio_cog.py     # Audio commands
+│       └── admin_cog.py     # Admin commands
 ├── config/
-│   ├── settings.py          # Configuration Pydantic
-│   └── logging_config.py    # Configuration logs
+│   ├── settings.py          # Pydantic settings
+│   └── logging_config.py    # Logging config
 ├── domain/
-│   └── sessions.py          # Modèles de session
+│   └── sessions.py          # Session models
 ├── sinks/
-│   ├── discord_sink.py      # Sink Discord (capture audio)
-│   └── audio_archiver.py    # Archivage WAV + conversion
+│   ├── discord_sink.py      # Discord sink (audio capture)
+│   └── audio_archiver.py    # WAV archive + conversion
 └── utils/
-    ├── commandline.py       # Arguments CLI
-    └── session_paths.py     # Chemins de session
-```
-
----
-
-## Docker
-
-### Build manuel
-
-```bash
-docker build -t pia-pia .
-```
-
-### Volumes
-
-| Chemin conteneur | Description |
-|---|---|
-| `/app/.logs` | Sessions audio (à monter en volume) |
-| `/app/config/player_maps` | Player maps par guilde |
-
-### Exemple docker-compose.yml
-
-```yaml
-services:
-  pia-pia:
-    build: .
-    container_name: pia-pia
-    restart: unless-stopped
-    env_file: .env
-    volumes:
-      - ./.logs:/app/.logs
-      - ./config/player_maps:/app/config/player_maps
+    ├── commandline.py       # CLI arguments
+    └── session_paths.py     # Session paths
 ```
 
 ---

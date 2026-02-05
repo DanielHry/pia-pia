@@ -1,7 +1,7 @@
 [project]
 name = "pia-pia"
 version = "0.1.0"
-description = "Bot Discord d’enregistrement vocal"
+description = "Pia-Pia Bot - Discord voice recorder"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

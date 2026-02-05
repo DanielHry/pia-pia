@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class AdminCog(commands.Cog):
     """
-    Commandes d'administration / utilitaires :
+    Admin / utility commands:
       - /update_player_map
       - /help
     """
@@ -26,7 +26,7 @@ class AdminCog(commands.Cog):
     # ------------------------------------------------------------------ #
     @discord.slash_command(
         name="update_player_map",
-        description="Met à jour la carte joueurs/personnages de Pia-Pia.",
+        description="Update Pia-Pia's player/character map.",
     )
     #@commands.has_permissions(administrator=True) # Uncomment if admin-only access is desired
     @commands.cooldown(1, 30, commands.BucketType.guild)
@@ -34,8 +34,7 @@ class AdminCog(commands.Cog):
         await ctx.trigger_typing()
         await self.bot.update_player_map(ctx)
         await ctx.respond(
-            f"Dossiers mis à jour pour {len(ctx.guild.members)} aventuriers "
-            f"et leurs alter-ego. ⚔️",
+            f"Folders updated for {len(ctx.guild.members)} adventurers and their alter egos. ⚔️",
             ephemeral=True,
         )
 
@@ -44,23 +43,20 @@ class AdminCog(commands.Cog):
     # ------------------------------------------------------------------ #
     @discord.slash_command(
         name="help",
-        description="Affiche les commandes de Pia-Pia.",
+        description="Show Pia-Pia commands.",
     )
     async def help_cmd(self, ctx: discord.ApplicationContext) -> None:
         commands_info: List[Tuple[str, str]] = [
-            ("/connect", "Inviter Pia-Pia dans ton salon vocal."),
-            ("/record", "Enregistrer l'audio du salon vocal."),
-            ("/stop", "Mettre en pause l'enregistrement."),
-            ("/disconnect", "Faire quitter le salon vocal à Pia-Pia."),
-            (
-                "/update_player_map",
-                "Mettre à jour la carte des joueurs et de leurs personnages.",
-            ),
+            ("/connect", "Invite Pia-Pia into your voice channel."),
+            ("/record", "Record the voice channel audio."),
+            ("/stop", "Stop the recording."),
+            ("/disconnect", "Make Pia-Pia leave the voice channel."),
+            ("/update_player_map", "Refresh the player ↔ character map from server members."),
         ]
 
         embed = discord.Embed(
-            title="Aide de Pia-Pia 📖",
-            description="Les croquis de ta légende, de la taverne au grand tome.",
+            title="Pia-Pia Help 📖",
+            description="Sketches of your legend — from tavern chatter to the grand tome.",
             color=discord.Color.blue(),
         )
 

@@ -12,20 +12,20 @@ if TYPE_CHECKING:
 
 def build_session_paths(settings: "Settings", session_id: str, create: bool = True) -> Dict[str, str]:
     """
-    Construit les chemins standardisés pour une session.
+    Build standardized paths for a session.
 
-    Convention :
-      - WAV : .logs/audio/<session_id>/user_<id>.wav
-      - Meta : .logs/audio/<session_id>/session_meta.json
+    Convention:
+      - Audio: .logs/audio/<session_id>/user_<id>.wav
+      - Meta:  .logs/audio/<session_id>/session_meta.json
 
-    Retourne un dict de str (paths) pour stockage facile dans AudioSessionInfo.
+    Returns a dict of str (paths) for easy storage in AudioSessionInfo.
     """
     logs_dir = Path(settings.logs_dir)
 
-    # Dossier session audio
+    # Audio session folder
     base_dir = logs_dir / settings.audio_sessions_subdir / session_id
 
-    # Ici, audio_dir == base_dir (les WAV sont directement dans ce répertoire)
+    # Here, audio_dir == base_dir (WAV files are written directly into this folder)
     audio_dir = base_dir
 
     # Meta
@@ -47,7 +47,7 @@ def apply_paths_to_session(
     create: bool = True,
 ) -> "AudioSessionInfo":
     """
-    Applique les chemins standardisés à une session AudioSessionInfo.
+    Apply standardized paths to an AudioSessionInfo session.
     """
     paths = build_session_paths(settings, session.session_id, create=create)
     session.base_dir = paths["base_dir"]

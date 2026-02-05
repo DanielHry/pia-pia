@@ -17,27 +17,25 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     # ------------------------------------------------------------------ #
-    # 1. Arguments CLI & Settings
+    # 1. CLI arguments & Settings
     # ------------------------------------------------------------------ #
     args = parse_args()
 
     settings = Settings()
     if args.debug:
-        # On force le mode debug depuis la CLI si demandé
+        # Force debug mode from the CLI if requested
         settings.debug = True
 
     # ------------------------------------------------------------------ #
-    # 2. Configuration du logging
+    # 2. Logging configuration
     # ------------------------------------------------------------------ #
     configure_logging(settings)
     logger.info("Lancement de Pia-Pia Bot 🦜")
 
     # ------------------------------------------------------------------ #
-    # 3. Bot
+    # 3. Bot initialization and Cogs setup
     # ------------------------------------------------------------------ #
     bot = PiaPiaBot(settings)
-
-    # Ajouter les Cogs
     bot.add_cog(AudioCog(bot))
     bot.add_cog(AdminCog(bot))
 
@@ -46,7 +44,7 @@ def main() -> None:
     # ------------------------------------------------------------------ #
     bot.run(settings.discord_token)
     
-    logger.info("Pia-Pia est bien rentré au perchoir. 🦜")
+    logger.info("Pia-Pia is back on its perch. 🦜")
 
 
 if __name__ == "__main__":

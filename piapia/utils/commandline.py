@@ -6,24 +6,24 @@ from typing import Optional, Sequence
 
 def parse_args(argv: Optional[Sequence[str]] = None):
     """
-    Parse les arguments de la ligne de commande.
+    Parse command-line arguments.
 
-    Pour l'instant, on gère surtout :
-      --debug : active le mode debug (logs plus verbeux)
+    For now, we mainly handle:
+      --debug : enable debug mode (more verbose logs)
     """
 
     parser = argparse.ArgumentParser(
-        description="Pia-Pia Bot - transcription Discord pour JDR"
+        description="Pia-Pia Bot - Discord voice recorder."
     )
 
     parser.add_argument(
         "--debug",
         action="store_true",
-        help="Active les logs en niveau DEBUG (plus verbeux).",
+        help="Enable DEBUG-level logs (more verbose).",
     )
 
-    # Tu pourras ajouter d'autres options ici plus tard, par ex :
-    # parser.add_argument("--config", type=str, help="Chemin vers un fichier de config...")
+    # You can add more options here later, e.g.:
+    # parser.add_argument("--config", type=str, help="Path to a config file...")
 
     args = parser.parse_args(argv)
     return args

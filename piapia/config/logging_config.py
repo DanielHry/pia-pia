@@ -10,25 +10,25 @@ from piapia.config.settings import Settings
 
 def configure_logging(settings: Settings) -> None:
     """
-    Configure le logging global de l'application à partir des Settings.
+    Configure application-wide logging from Settings.
 
-    - Root logger : console + fichier app (.logs/app/pia-pia.log)
+    - Root logger: console + app file (.logs/app/pia-pia.log)
     """
 
     # ------------------------------------------------------------------ #
-    # 1) Répertoires de logs
+    # 1) Log directories
     # ------------------------------------------------------------------ #
     logs_dir = settings.logs_dir
     app_dir = os.path.join(logs_dir, "app")
     os.makedirs(app_dir, exist_ok=True)
 
     # ------------------------------------------------------------------ #
-    # 2) Fichiers de logs
+    # 2) Log files
     # ------------------------------------------------------------------ #
     app_log_file = os.path.join(app_dir, "pia-pia.log")
 
     # ------------------------------------------------------------------ #
-    # 3) Niveau de log global
+    # 3) Global log level
     # ------------------------------------------------------------------ #
     level = logging.DEBUG if settings.debug else logging.INFO
     logging.captureWarnings(True)
@@ -52,7 +52,7 @@ def configure_logging(settings: Settings) -> None:
                 "formatter": "standard",
                 "stream": "ext://sys.stdout",
             },
-            # Log général du bot : tout ce qui passe par le root + libs
+            # Bot main log: everything through root + libs
             "app_file": {
                 "class": "logging.handlers.RotatingFileHandler",
                 "level": level,
@@ -65,7 +65,7 @@ def configure_logging(settings: Settings) -> None:
             },
         },
         "loggers": {
-            # Réduire le bruit de certaines libs
+            # Reduce noise from some libs
             "discord": {
                 "handlers": ["console", "app_file"],
                 "level": "WARNING",
@@ -92,7 +92,7 @@ def configure_logging(settings: Settings) -> None:
                 "propagate": False,
             },
         },
-        # Root : tout le reste (ton code) → console + app_file
+        # Root: everything else (your code) -> console + app_file
         "root": {
             "handlers": ["console", "app_file"],
             "level": level,

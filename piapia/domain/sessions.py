@@ -24,7 +24,7 @@ def _dt_from_iso(value: Optional[str]) -> Optional[datetime]:
 
 def make_session_id(guild_id: int, now: Optional[datetime] = None) -> str:
     """
-    Génère un session_id stable.
+    Generate a stable session_id.
     Ex: "2025-12-09_20-30-00_g941688253159968788"
     """
     now = now or datetime.now(timezone.utc)
@@ -37,10 +37,10 @@ class PlayerSessionInfo:
     player: Optional[str] = None
     character: Optional[str] = None
 
-    # V1: on privilégie un offset (plus simple pour l’offline)
+    # V1: prefer an offset (simpler for offline processing)
     first_offset_seconds: Optional[float] = None
 
-    # Optionnel si tu veux aussi garder une date absolue
+    # Optional if you also want to keep an absolute timestamp
     first_spoke_at: Optional[datetime] = None
 
     def to_dict(self) -> Dict[str, Any]:
@@ -73,15 +73,15 @@ class AudioSessionInfo:
     ended_at: Optional[datetime] = None
     label: Optional[str] = None
 
-    # Chemins (remplis à la création de session)
+    # Paths (filled when creating the session)
     base_dir: str = ""
     audio_dir: str = ""
     meta_path: str = ""
 
-    # Infos joueurs : user_id -> info
+    # Infos players (user_id => PlayerSessionInfo)
     players: Dict[int, PlayerSessionInfo] = field(default_factory=dict)
 
-    # Permet d’absorber des champs additionnels sans casser le parsing
+    #  Allows absorbing additional fields without breaking parsing
     extra: Dict[str, Any] = field(default_factory=dict)
 
     def add_or_update_player(
@@ -103,7 +103,7 @@ class AudioSessionInfo:
         return info
 
     def to_dict(self) -> Dict[str, Any]:
-        # JSON n’aime pas les clés int => on force en str pour être explicite
+        # JSON doesn't like int keys => force to str to be explicit
         players_dict = {str(uid): p.to_dict() for uid, p in self.players.items()}
 
         data: Dict[str, Any] = {
@@ -119,7 +119,7 @@ class AudioSessionInfo:
             "players": players_dict,
         }
 
-        # Extra (si on veut stocker offset map, start_ts, etc.)
+        # Optional: include any extra fields that were added dynamically (e.g. by the sink)
         if self.extra:
             data["extra"] = self.extra
 
@@ -130,7 +130,7 @@ class AudioSessionInfo:
         raw_players = data.get("players") or {}
         players: Dict[int, PlayerSessionInfo] = {}
 
-        # On accepte dict { "123": {...} } ou liste [{...}, {...}]
+        # Support both dict (str keys) and list formats for players for backward compatibility.
         if isinstance(raw_players, dict):
             for k, v in raw_players.items():
                 try:
@@ -159,12 +159,12 @@ class AudioSessionInfo:
 
     def save_json(self, path: Optional[str] = None, indent: int = 2) -> str:
         """
-        Sauvegarde la session en JSON (session_meta.json).
-        Retourne le chemin écrit.
+        Save the session as JSON (session_meta.json).
+        Return the path that was written.
         """
         out_path = path or self.meta_path
         if not out_path:
-            raise ValueError("Aucun chemin de sortie (meta_path) défini pour la session.")
+            raise ValueError("No output path (meta_path) defined for this session.")
 
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
         with open(out_path, "w", encoding="utf-8") as f:
