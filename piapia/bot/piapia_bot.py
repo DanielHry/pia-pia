@@ -310,9 +310,9 @@ class PiaPiaBot(discord.Bot):
                         guild_id,
                         e,
                     )
-                    self._close_and_clean_sink_for_guild(guild_id)
+                    await self._close_and_clean_sink_for_guild_async(guild_id)
             else:
-                self._close_and_clean_sink_for_guild(guild_id)
+                await self._close_and_clean_sink_for_guild_async(guild_id)
 
         except asyncio.CancelledError:
             # Timer cancelled normally (session stopped manually)
@@ -345,6 +345,26 @@ class PiaPiaBot(discord.Bot):
         # 3) State cleanup
         self.current_sink_by_guild.pop(guild_id, None)
         self.current_session_by_guild.pop(guild_id, None)
+
+    async def _close_and_clean_sink_for_guild_async(self, guild_id: int) -> None:
+        # 0) Cancel timer in the loop
+        self._cancel_session_timer(guild_id)
+
+        # 1) Detach state in the loop (avoid races)
+        session = self.current_session_by_guild.pop(guild_id, None)
+        sink = self.current_sink_by_guild.pop(guild_id, None)
+
+        # 2) Finalize meta (blocking) in a thread
+        if session is not None:
+            def finalize_session():
+                if session.ended_at is None:
+                    session.ended_at = datetime.now(timezone.utc)
+                session.save_json()
+            await asyncio.to_thread(finalize_session)
+
+        # 3) Sink cleanup (blocking) in a thread
+        if sink is not None:
+            await asyncio.to_thread(sink.cleanup)
 
     def _create_session_for_guild(
         self,
@@ -526,7 +546,7 @@ class PiaPiaBot(discord.Bot):
         self.guild_to_helper.pop(guild_id, None)
 
         # Just in case the callback did not fire
-        self._close_and_clean_sink_for_guild(guild_id)
+        await self._close_and_clean_sink_for_guild_async(guild_id)
 
     # ------------------------------------------------------------------ #
     # Shutdown global
@@ -593,7 +613,7 @@ class PiaPiaBot(discord.Bot):
                     helper.set_vc(None)
                     self.guild_to_helper.pop(guild_id, None)
 
-                self._close_and_clean_sink_for_guild(guild_id)
+                await self._close_and_clean_sink_for_guild_async(guild_id)
                 logger.info(
                     "Pia-Pia left the guild %s voice channel; cleanup done.",
                     guild_id,
