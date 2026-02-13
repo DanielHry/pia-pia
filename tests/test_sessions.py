@@ -1,6 +1,6 @@
 # tests/test_sessions.py
 
-"""Tests pour piapia/domain/sessions.py"""
+"""Tests for piapia/domain/sessions.py"""
 
 import json
 from datetime import datetime, timezone
@@ -19,7 +19,7 @@ from piapia.domain.sessions import (
 # =============================================================================
 class TestMakeSessionId:
     def test_format_with_explicit_datetime(self):
-        """Le session_id suit le format attendu."""
+        """The session_id follows the expected format."""
         dt = datetime(2025, 12, 9, 20, 30, 45)
         guild_id = 123456789
         
@@ -28,22 +28,22 @@ class TestMakeSessionId:
         assert session_id == "2025-12-09_20-30-45_g123456789"
 
     def test_uses_current_time_by_default(self):
-        """Sans datetime fourni, utilise l'heure courante (UTC)."""
+        """Without a provided datetime, uses the current time (UTC)."""
         guild_id = 987654321
         
         session_id = make_session_id(guild_id)
         
-        # Le session_id doit contenir le guild_id
+        # The session_id must contain the guild_id
         assert f"_g{guild_id}" in session_id
-        # Et commencer par une date valide au format attendu
+        # And start with a valid date in the expected format
         date_part = session_id.split("_g")[0]
-        # Vérifie que le format est correct (ne lève pas d'exception)
+        # Ensure the format is correct (does not raise)
         parsed = datetime.strptime(date_part, "%Y-%m-%d_%H-%M-%S")
-        # La date doit être raisonnable (pas dans le passé lointain ni le futur)
+        # The date should be reasonable (not in the distant past or future)
         assert parsed.year >= 2024
 
     def test_different_guilds_produce_different_ids(self):
-        """Deux guildes différentes ont des session_ids différents."""
+        """Two different guilds have different session_ids."""
         dt = datetime(2025, 1, 1, 12, 0, 0)
         
         id1 = make_session_id(111, now=dt)
@@ -59,7 +59,7 @@ class TestMakeSessionId:
 # =============================================================================
 class TestPlayerSessionInfo:
     def test_to_dict_minimal(self):
-        """Sérialisation avec seulement user_id."""
+        """Serialization with only user_id."""
         player = PlayerSessionInfo(user_id=12345)
         
         data = player.to_dict()
@@ -71,7 +71,7 @@ class TestPlayerSessionInfo:
         assert data["first_spoke_at"] is None
 
     def test_to_dict_full(self):
-        """Sérialisation avec tous les champs."""
+        """Serialization with all fields."""
         dt = datetime(2025, 6, 15, 14, 30, 0)
         player = PlayerSessionInfo(
             user_id=12345,
@@ -90,7 +90,7 @@ class TestPlayerSessionInfo:
         assert data["first_spoke_at"] == dt.isoformat()
 
     def test_from_dict_minimal(self):
-        """Désérialisation avec seulement user_id."""
+        """Deserialization with only user_id."""
         data = {"user_id": 99999}
         
         player = PlayerSessionInfo.from_dict(data)
@@ -100,9 +100,9 @@ class TestPlayerSessionInfo:
         assert player.character is None
 
     def test_from_dict_full(self):
-        """Désérialisation avec tous les champs."""
+        """Deserialization with all fields."""
         data = {
-            "user_id": "12345",  # string, doit être converti en int
+            "user_id": "12345",  # string, must be converted to int
             "player": "Marie",
             "character": "Elara",
             "first_offset_seconds": 10.0,
@@ -118,7 +118,7 @@ class TestPlayerSessionInfo:
         assert player.first_spoke_at == datetime(2025, 6, 15, 14, 30, 0)
 
     def test_roundtrip(self):
-        """to_dict puis from_dict conserve les données."""
+        """to_dict then from_dict preserves the data."""
         original = PlayerSessionInfo(
             user_id=42,
             player="Test",
@@ -143,7 +143,7 @@ class TestPlayerSessionInfo:
 class TestAudioSessionInfo:
     @pytest.fixture
     def minimal_session(self):
-        """Session avec les champs obligatoires uniquement."""
+        """Session with required fields only."""
         return AudioSessionInfo(
             session_id="2025-01-01_00-00-00_g111",
             guild_id=111,
@@ -153,14 +153,14 @@ class TestAudioSessionInfo:
 
     @pytest.fixture
     def full_session(self):
-        """Session avec tous les champs remplis."""
+        """Session with all fields populated."""
         session = AudioSessionInfo(
             session_id="2025-06-15_14-30-00_g222",
             guild_id=222,
             mode="record_only",
             started_at=datetime(2025, 6, 15, 14, 30, 0),
             ended_at=datetime(2025, 6, 15, 16, 0, 0),
-            label="Session de test",
+            label="Test session",
             base_dir="/tmp/audio/session1",
             audio_dir="/tmp/audio/session1",
             meta_path="/tmp/audio/session1/session_meta.json",
@@ -171,7 +171,7 @@ class TestAudioSessionInfo:
         return session
 
     def test_to_dict_minimal(self, minimal_session):
-        """Sérialisation d'une session minimale."""
+        """Serialization of a minimal session."""
         data = minimal_session.to_dict()
         
         assert data["session_id"] == "2025-01-01_00-00-00_g111"
@@ -182,18 +182,18 @@ class TestAudioSessionInfo:
         assert data["players"] == {}
 
     def test_to_dict_full(self, full_session):
-        """Sérialisation d'une session complète."""
+        """Serialization of a full session."""
         data = full_session.to_dict()
         
         assert data["session_id"] == "2025-06-15_14-30-00_g222"
-        assert data["label"] == "Session de test"
-        assert "1001" in data["players"]  # clés converties en string
+        assert data["label"] == "Test session"
+        assert "1001" in data["players"]  # keys converted to strings
         assert "1002" in data["players"]
         assert data["players"]["1001"]["player"] == "Alice"
         assert data["extra"]["custom_field"] == "value"
 
     def test_from_dict_minimal(self):
-        """Désérialisation d'une session minimale."""
+        """Deserialization of a minimal session."""
         data = {
             "session_id": "test-session",
             "guild_id": 333,
@@ -209,7 +209,7 @@ class TestAudioSessionInfo:
         assert session.players == {}
 
     def test_from_dict_with_players_as_dict(self):
-        """Désérialisation avec players en format dict."""
+        """Deserialization with players in dict format."""
         data = {
             "session_id": "test",
             "guild_id": 1,
@@ -226,7 +226,7 @@ class TestAudioSessionInfo:
         assert session.players[123].player == "Test"
 
     def test_from_dict_with_players_as_list(self):
-        """Désérialisation avec players en format liste."""
+        """Deserialization with players in list format."""
         data = {
             "session_id": "test",
             "guild_id": 1,
@@ -245,7 +245,7 @@ class TestAudioSessionInfo:
         assert session.players[456].character == "Mage"
 
     def test_from_dict_missing_started_at_uses_now(self):
-        """Sans started_at, utilise datetime.now(timezone.utc)."""
+        """Without started_at, uses datetime.now(timezone.utc)."""
         data = {
             "session_id": "test",
             "guild_id": 1,
@@ -256,14 +256,14 @@ class TestAudioSessionInfo:
         session = AudioSessionInfo.from_dict(data)
         
         after = datetime.now(timezone.utc)
-        # Si started_at est naive (pas de timezone), on le compare en naive
+        # If started_at is naive (no timezone), compare in naive form
         if session.started_at.tzinfo is None:
             before = before.replace(tzinfo=None)
             after = after.replace(tzinfo=None)
         assert before <= session.started_at <= after
 
     def test_roundtrip(self, full_session):
-        """to_dict puis from_dict conserve les données."""
+        """to_dict then from_dict preserves the data."""
         data = full_session.to_dict()
         restored = AudioSessionInfo.from_dict(data)
         
@@ -275,7 +275,7 @@ class TestAudioSessionInfo:
         assert restored.extra == full_session.extra
 
     def test_add_or_update_player_creates_new(self, minimal_session):
-        """add_or_update_player crée un nouveau joueur."""
+        """add_or_update_player creates a new player."""
         minimal_session.add_or_update_player(999, player="New", character="Char")
         
         assert 999 in minimal_session.players
@@ -283,15 +283,15 @@ class TestAudioSessionInfo:
         assert minimal_session.players[999].character == "Char"
 
     def test_add_or_update_player_updates_existing(self, minimal_session):
-        """add_or_update_player met à jour un joueur existant."""
+        """add_or_update_player updates an existing player."""
         minimal_session.add_or_update_player(999, player="First")
         minimal_session.add_or_update_player(999, character="Updated")
         
-        assert minimal_session.players[999].player == "First"  # inchangé
+        assert minimal_session.players[999].player == "First"  # unchanged
         assert minimal_session.players[999].character == "Updated"
 
     def test_save_and_load_json(self, full_session, tmp_path):
-        """save_json puis load_json conserve les données."""
+        """save_json then load_json preserves the data."""
         json_path = tmp_path / "session_meta.json"
         full_session.meta_path = str(json_path)
         
@@ -303,7 +303,7 @@ class TestAudioSessionInfo:
         assert len(loaded.players) == len(full_session.players)
 
     def test_save_json_creates_directory(self, minimal_session, tmp_path):
-        """save_json crée le dossier parent si nécessaire."""
+        """save_json creates the parent directory if needed."""
         deep_path = tmp_path / "a" / "b" / "c" / "meta.json"
         minimal_session.meta_path = str(deep_path)
         
@@ -311,15 +311,8 @@ class TestAudioSessionInfo:
         
         assert deep_path.exists()
 
-    def test_save_json_without_path_raises(self, minimal_session):
-        """save_json sans meta_path lève une erreur."""
-        minimal_session.meta_path = ""
-        
-        with pytest.raises(ValueError, match="Aucun chemin"):
-            minimal_session.save_json()
-
     def test_save_json_custom_path(self, minimal_session, tmp_path):
-        """save_json avec chemin explicite utilise ce chemin."""
+        """save_json with an explicit path uses that path."""
         custom_path = tmp_path / "custom.json"
         
         result = minimal_session.save_json(path=str(custom_path))

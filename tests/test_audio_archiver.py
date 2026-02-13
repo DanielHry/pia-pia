@@ -1,6 +1,6 @@
 # tests/test_audio_archiver.py
 
-"""Tests pour piapia/sinks/audio_archiver.py"""
+"""Tests for piapia/sinks/audio_archiver.py"""
 
 import wave
 from pathlib import Path
@@ -12,7 +12,7 @@ from piapia.sinks.audio_archiver import AudioArchiver
 
 @pytest.fixture
 def archiver(tmp_path):
-    """AudioArchiver configuré pour les tests."""
+    """AudioArchiver configured for tests."""
     return AudioArchiver(
         base_dir=str(tmp_path),
         session_id="test-session",
@@ -24,17 +24,17 @@ def archiver(tmp_path):
 
 @pytest.fixture
 def pcm_data():
-    """Données PCM de test (1 seconde de silence stéréo 48kHz 16-bit)."""
+    """Test PCM data (1 second of 48kHz 16-bit stereo silence)."""
     # 48000 samples * 2 channels * 2 bytes = 192000 bytes
     return b"\x00" * 192000
 
 
 # =============================================================================
-# Initialisation
+# Initialization
 # =============================================================================
 class TestArchiverInit:
     def test_creates_session_directory(self, tmp_path):
-        """Le constructeur crée le dossier de session."""
+        """The constructor creates the session directory."""
         archiver = AudioArchiver(
             base_dir=str(tmp_path),
             session_id="new-session",
@@ -47,7 +47,7 @@ class TestArchiverInit:
         assert (tmp_path / "new-session").is_dir()
 
     def test_stores_audio_parameters(self, tmp_path):
-        """Les paramètres audio sont stockés."""
+        """Audio parameters are stored."""
         archiver = AudioArchiver(
             base_dir=str(tmp_path),
             session_id="session",
@@ -61,7 +61,7 @@ class TestArchiverInit:
         assert archiver.sample_rate == 44100
 
     def test_bytes_written_starts_at_zero(self, archiver):
-        """bytes_written commence à 0."""
+        """bytes_written starts at 0."""
         assert archiver.bytes_written == 0
 
 
@@ -70,7 +70,7 @@ class TestArchiverInit:
 # =============================================================================
 class TestArchiverAppend:
     def test_creates_wav_file_for_user(self, archiver, pcm_data, tmp_path):
-        """append crée un fichier WAV pour l'utilisateur."""
+        """append creates a WAV file for the user."""
         archiver.append(user_id=12345, data=pcm_data)
         archiver.close()
         
@@ -78,13 +78,13 @@ class TestArchiverAppend:
         assert wav_path.exists()
 
     def test_tracks_bytes_written(self, archiver, pcm_data):
-        """append incrémente bytes_written."""
+        """append increments bytes_written."""
         archiver.append(user_id=1, data=pcm_data)
         
         assert archiver.bytes_written == len(pcm_data)
 
     def test_multiple_appends_accumulate(self, archiver, pcm_data):
-        """Plusieurs appends s'accumulent."""
+        """Multiple appends accumulate."""
         archiver.append(user_id=1, data=pcm_data)
         archiver.append(user_id=1, data=pcm_data)
         archiver.append(user_id=2, data=pcm_data)
@@ -92,7 +92,7 @@ class TestArchiverAppend:
         assert archiver.bytes_written == 3 * len(pcm_data)
 
     def test_different_users_different_files(self, archiver, pcm_data, tmp_path):
-        """Chaque utilisateur a son propre fichier."""
+        """Each user gets their own file."""
         archiver.append(user_id=100, data=pcm_data)
         archiver.append(user_id=200, data=pcm_data)
         archiver.close()
@@ -106,7 +106,7 @@ class TestArchiverAppend:
 # =============================================================================
 class TestArchiverClose:
     def test_creates_valid_wav_files(self, archiver, pcm_data, tmp_path):
-        """close produit des fichiers WAV valides."""
+        """close produces valid WAV files."""
         archiver.append(user_id=1, data=pcm_data)
         archiver.close()
         
@@ -115,10 +115,10 @@ class TestArchiverClose:
             assert wf.getnchannels() == 2
             assert wf.getsampwidth() == 2
             assert wf.getframerate() == 48000
-            assert wf.getnframes() == 48000  # 1 seconde
+            assert wf.getnframes() == 48000  # 1 second
 
     def test_wav_format_no_conversion(self, archiver, pcm_data, tmp_path):
-        """Format WAV : pas de conversion, fichiers conservés."""
+        """WAV format: no conversion; files are preserved."""
         archiver.append(user_id=1, data=pcm_data)
         archiver.close()
         
@@ -126,22 +126,22 @@ class TestArchiverClose:
         assert wav_path.exists()
 
     def test_double_close_is_safe(self, archiver, pcm_data):
-        """Appeler close() deux fois ne cause pas d'erreur."""
+        """Calling close() twice does not raise an error."""
         archiver.append(user_id=1, data=pcm_data)
         archiver.close()
-        archiver.close()  # Doit être idempotent
+        archiver.close()  # Should be idempotent
 
     def test_close_without_data(self, archiver):
-        """close() sans données n'échoue pas."""
-        archiver.close()  # Pas d'exception
+        """close() without any data does not fail."""
+        archiver.close()  # No exception
 
 
 # =============================================================================
-# Paramètres audio
+# Audio parameters
 # =============================================================================
 class TestArchiverAudioParams:
     def test_mono_audio(self, tmp_path, pcm_data):
-        """Support de l'audio mono."""
+        """Mono audio support."""
         archiver = AudioArchiver(
             base_dir=str(tmp_path),
             session_id="mono-session",
@@ -149,7 +149,7 @@ class TestArchiverAudioParams:
             sample_width=2,
             sample_rate=48000,
         )
-        # Données mono (moitié de la taille stéréo)
+        # Mono data (half the size of stereo)
         mono_data = b"\x00" * 96000
         archiver.append(user_id=1, data=mono_data)
         archiver.close()
@@ -159,7 +159,7 @@ class TestArchiverAudioParams:
             assert wf.getnchannels() == 1
 
     def test_different_sample_rate(self, tmp_path):
-        """Support de différents sample rates."""
+        """Support for different sample rates."""
         archiver = AudioArchiver(
             base_dir=str(tmp_path),
             session_id="44k-session",
@@ -167,7 +167,7 @@ class TestArchiverAudioParams:
             sample_width=2,
             sample_rate=44100,
         )
-        # 1 seconde à 44.1kHz stéréo 16-bit
+        # 1 second at 44.1kHz stereo 16-bit
         data = b"\x00" * (44100 * 2 * 2)
         archiver.append(user_id=1, data=data)
         archiver.close()

@@ -1,11 +1,11 @@
 # tests/conftest.py
 
-"""Configuration pytest et fixtures partagées."""
+"""Pytest configuration and shared fixtures."""
 
 import pytest
 
 
-# Marqueurs personnalisés
+# Custom markers
 def pytest_configure(config):
     config.addinivalue_line(
         "markers",
