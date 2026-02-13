@@ -19,7 +19,6 @@ def archiver(tmp_path):
         channels=2,
         sample_width=2,
         sample_rate=48000,
-        audio_format="wav",
     )
 
 
@@ -55,13 +54,11 @@ class TestArchiverInit:
             channels=1,
             sample_width=4,
             sample_rate=44100,
-            audio_format="wav",
         )
         
         assert archiver.channels == 1
         assert archiver.sample_width == 4
         assert archiver.sample_rate == 44100
-        assert archiver.audio_format == "wav"
 
     def test_bytes_written_starts_at_zero(self, archiver):
         """bytes_written commence à 0."""

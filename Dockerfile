@@ -6,14 +6,14 @@
 # =============================================================================
 
 # ---------------------------------------------------------------------------
-# Stage 1 — Build : installer les dépendances avec uv
+# Stage 1 — Build: install dependencies with uv
 # ---------------------------------------------------------------------------
 FROM python:3.12-slim-bookworm AS builder
 
-# Installer uv
+# Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Dépendances système pour compiler les packages Python (PyNaCl, etc.)
+# System dependencies to compile Python packages (PyNaCl, etc.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libffi-dev \
@@ -22,45 +22,41 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copier les fichiers de dépendances en premier (cache Docker)
+# Copy dependency files first (Docker cache)
 COPY pyproject.toml uv.lock ./
 
-# Sync des dépendances (sans le projet lui-même)
+# Sync dependencies (without installing the project itself)
 RUN uv sync --frozen --no-dev --no-install-project
 
-# Copier le code source
+# Copy the source code
 COPY piapia/ ./piapia/
 
-# Installer le projet
+# Install the project
 RUN uv sync --frozen --no-dev
 
-
-# ---------------------------------------------------------------------------
-# Stage 2 — Runtime : image légère avec ffmpeg
-# ---------------------------------------------------------------------------
 FROM python:3.12-slim-bookworm
 
-# Dépendances runtime
-#   - libsodium  : chiffrement voix Discord (PyNaCl)
-#   - libopus    : codec audio voix Discord
+# Runtime dependencies
+#   - libsodium : Discord voice encryption (PyNaCl)
+#   - libopus   : Discord voice audio codec
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libsodium23 \
     libopus0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Utilisateur non-root
+# Non-root user
 RUN useradd --create-home --shell /bin/bash piapia
 
 WORKDIR /app
 
-# Copier le venv et le code depuis le builder
+# Copy the venv and code from the builder
 COPY --from=builder --chown=piapia:piapia /app /app
 
-# Créer les dossiers de données (seront montés en volume)
+# Create data directories (will be mounted as volumes)
 RUN mkdir -p /app/.logs /app/config/player_maps \
     && chown -R piapia:piapia /app/.logs /app/config
 
 USER piapia
 
-# Point d'entrée
+# Entry point
 CMD ["/app/.venv/bin/python", "-m", "piapia"]

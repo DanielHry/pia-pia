@@ -15,8 +15,8 @@ services:
     env_file: .env
 
     volumes:
-      # Sessions audio (WAV/MP3/FLAC/OGG) — persistées sur l'hôte
+      # Sessions audio (WAV) — persisted on the host
       - ./.logs:/app/.logs
 
-      # Player maps par guilde — persistées sur l'hôte
+      # Player maps par guilde — persisted on the host
       - ./config/player_maps:/app/config/player_maps

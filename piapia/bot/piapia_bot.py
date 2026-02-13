@@ -61,7 +61,7 @@ class PiaPiaBot(discord.Bot):
 
     Reliability notes
     -----------------
-    Cleanup and conversion are best-effort. On shutdown, the bot attempts to finalize
+    Cleanup are best-effort. On shutdown, the bot attempts to finalize
     session metadata and clean all active sinks before closing the Discord connection.
     """
 

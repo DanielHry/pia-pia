@@ -24,12 +24,7 @@ class AudioArchiver:
     -------------
     Files are stored under a session directory:
 
-        {base_dir}/{session_id}/user_{user_id}.{format}
-
-    During the session, files are always written as WAV. After `close()`, the final
-    artifacts are either:
-    - WAV files (when `audio_format="wav"` or conversion cannot be performed), or
-    - Converted files alongside removed source WAVs (when conversion succeeds).
+        {base_dir}/{session_id}/user_{user_id}.wav
 
     Parameters
     ----------
@@ -53,20 +48,12 @@ class AudioArchiver:
         channels: int,
         sample_width: int,
         sample_rate: int,
-        audio_format: str = "wav",
     ) -> None:
         self.base_dir = base_dir
         self.session_id = session_id
         self.channels = channels
         self.sample_width = sample_width
         self.sample_rate = sample_rate
-        self.audio_format = audio_format.lower().strip()
-        if self.audio_format != "wav":
-            logger.warning(
-                "AudioArchiver: audio_format=%s ignored (bot keeps WAV only). "
-                "Use an external conversion script if needed.",
-                self.audio_format,
-            )
         
         self.session_path = os.path.join(self.base_dir, self.session_id)
         os.makedirs(self.session_path, exist_ok=True)
