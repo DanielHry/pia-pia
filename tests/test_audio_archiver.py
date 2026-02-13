@@ -55,26 +55,13 @@ class TestArchiverInit:
             channels=1,
             sample_width=4,
             sample_rate=44100,
-            audio_format="flac",
+            audio_format="wav",
         )
         
         assert archiver.channels == 1
         assert archiver.sample_width == 4
         assert archiver.sample_rate == 44100
-        assert archiver.audio_format == "flac"
-
-    def test_normalizes_audio_format(self, tmp_path):
-        """Le format audio est normalisé (lowercase, strip)."""
-        archiver = AudioArchiver(
-            base_dir=str(tmp_path),
-            session_id="session",
-            channels=2,
-            sample_width=2,
-            sample_rate=48000,
-            audio_format="  MP3  ",
-        )
-        
-        assert archiver.audio_format == "mp3"
+        assert archiver.audio_format == "wav"
 
     def test_bytes_written_starts_at_zero(self, archiver):
         """bytes_written commence à 0."""
@@ -150,63 +137,6 @@ class TestArchiverClose:
     def test_close_without_data(self, archiver):
         """close() sans données n'échoue pas."""
         archiver.close()  # Pas d'exception
-
-
-# =============================================================================
-# Conversion de format (nécessite ffmpeg)
-# =============================================================================
-class TestArchiverConversion:
-    @pytest.fixture
-    def mp3_archiver(self, tmp_path):
-        """AudioArchiver configuré pour MP3."""
-        return AudioArchiver(
-            base_dir=str(tmp_path),
-            session_id="mp3-session",
-            channels=2,
-            sample_width=2,
-            sample_rate=48000,
-            audio_format="mp3",
-        )
-
-    def test_mp3_conversion_removes_wav(self, mp3_archiver, pcm_data, tmp_path):
-        """La conversion MP3 supprime le WAV source (si ffmpeg disponible)."""
-        mp3_archiver.append(user_id=1, data=pcm_data)
-        mp3_archiver.close()
-        
-        session_dir = tmp_path / "mp3-session"
-        wav_files = list(session_dir.glob("*.wav"))
-        mp3_files = list(session_dir.glob("*.mp3"))
-        
-        # Soit la conversion a réussi (MP3 présent, WAV supprimé)
-        # Soit ffmpeg n'est pas installé (WAV conservé)
-        if mp3_files:
-            assert len(mp3_files) == 1
-            assert len(wav_files) == 0
-        else:
-            # ffmpeg non disponible, WAV conservé
-            assert len(wav_files) == 1
-
-    def test_flac_conversion(self, tmp_path, pcm_data):
-        """Test de conversion FLAC."""
-        archiver = AudioArchiver(
-            base_dir=str(tmp_path),
-            session_id="flac-session",
-            channels=2,
-            sample_width=2,
-            sample_rate=48000,
-            audio_format="flac",
-        )
-        archiver.append(user_id=1, data=pcm_data)
-        archiver.close()
-        
-        session_dir = tmp_path / "flac-session"
-        wav_files = list(session_dir.glob("*.wav"))
-        flac_files = list(session_dir.glob("*.flac"))
-        
-        # Même logique : si ffmpeg ok, FLAC présent
-        if flac_files:
-            assert len(flac_files) == 1
-            assert len(wav_files) == 0
 
 
 # =============================================================================

@@ -41,11 +41,9 @@ RUN uv sync --frozen --no-dev
 FROM python:3.12-slim-bookworm
 
 # Dépendances runtime
-#   - ffmpeg     : conversion audio (pydub)
 #   - libsodium  : chiffrement voix Discord (PyNaCl)
 #   - libopus    : codec audio voix Discord
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
     libsodium23 \
     libopus0 \
     && rm -rf /var/lib/apt/lists/*

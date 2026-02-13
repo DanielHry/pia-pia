@@ -5,8 +5,6 @@ from typing import Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Formats supported by pydub (requires ffmpeg for mp3, ogg, flac)
-SUPPORTED_AUDIO_FORMATS = {"wav", "mp3", "flac", "ogg"}
 
 class Settings(BaseSettings):
     """
@@ -32,9 +30,6 @@ class Settings(BaseSettings):
 
     # Subdir dedicated to audio sessions (logs/audio/<session_id>/...)
     audio_sessions_subdir: str = Field("audio", validation_alias="AUDIO_SESSIONS_SUBDIR")
-
-    # Output audio format (wav, mp3, flac, ogg)
-    audio_format: str = Field("wav", validation_alias="AUDIO_FORMAT")
 
     # Maximum session duration in minutes (0 = unlimited)
     max_session_duration_minutes: int = Field(240, validation_alias="MAX_SESSION_DURATION_MINUTES")

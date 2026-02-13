@@ -12,7 +12,7 @@ import discord
 import yaml
 
 from piapia.bot.helper import BotHelper
-from piapia.config.settings import Settings, SUPPORTED_AUDIO_FORMATS
+from piapia.config.settings import Settings
 from piapia.domain.sessions import AudioSessionInfo, make_session_id
 from piapia.sinks.audio_archiver import AudioArchiver
 from piapia.sinks.discord_sink import DiscordSink
@@ -55,7 +55,6 @@ class PiaPiaBot(discord.Bot):
     Configuration
     -------------
     Behavior and output paths are driven by `Settings`, including:
-    - `audio_format`
     - `logs_dir` / `audio_sessions_subdir`
     - `player_map_dir`
     - `max_session_duration_minutes`
@@ -92,14 +91,6 @@ class PiaPiaBot(discord.Bot):
 
         # Max session duration timers (guild_id -> asyncio.Task)
         self._session_timers: Dict[int, asyncio.Task] = {}
-
-        # Audio format validation
-        fmt = self.settings.audio_format.lower().strip()
-        if fmt not in SUPPORTED_AUDIO_FORMATS:
-            raise ValueError(
-                f"Audio format '{fmt}' is not supported. "
-                f"Accepted formats: {', '.join(sorted(SUPPORTED_AUDIO_FORMATS))}"
-            )
 
         # Load player maps from disk (if configured)
         self._load_player_maps()
@@ -439,13 +430,11 @@ class PiaPiaBot(discord.Bot):
                 channels=2,
                 sample_width=2,
                 sample_rate=48000,
-                audio_format=self.settings.audio_format,
             )
             logger.info(
-                "Audio archiving enabled for guild %s, session %s (format: %s).",
+                "Audio archiving enabled for guild %s, session %s.",
                 guild_id,
                 session.session_id,
-                self.settings.audio_format,
             )
 
         sink = DiscordSink(

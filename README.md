@@ -13,7 +13,7 @@ It archives **one file per participant** and generates **session metadata** (`se
 - ✅ `/disconnect` : leaves the voice channel
 - ✅ `/update_player_map` : refreshes the player/character list (admin)
 - ✅ `/help` : shows help
-- ✅ Per-user audio archiving (WAV, MP3, FLAC, or OGG)
+- ✅ Per-user audio archiving (WAV)
 - ✅ Multi-server support (one player map per guild)
 
 ---
@@ -32,7 +32,6 @@ It archives **one file per participant** and generates **session metadata** (`se
 
 - **Python 3.11+**
 - **uv** (dependency manager) — [Astral documentation](https://docs.astral.sh/uv/getting-started/installation/)
-- **ffmpeg** (optional, required for MP3/FLAC/OGG) — [ffmpeg downloads](https://ffmpeg.org/download.html)
 
 ---
 
@@ -87,7 +86,6 @@ docker compose down
 | `LOGS_DIR` | Logs root folder | `.logs` |
 | `AUDIO_SESSIONS_SUBDIR` | Audio sessions subfolder | `audio` |
 | `PLAYER_MAP_DIR` | Player maps folder (per guild) | `config/player_maps` |
-| `AUDIO_FORMAT` | Audio format: `wav`, `mp3`, `flac`, `ogg` | `mp3` |
 | `MAX_SESSION_DURATION_MINUTES` | Max session duration (0 = unlimited) | `240` |
 
 
@@ -119,9 +117,9 @@ docker compose down
 
 ```
 .logs/audio/2026-02-04_20-30-00_g123456789/
-├── user_111111111.mp3      # Player 1 audio
-├── user_222222222.mp3      # Player 2 audio
-├── user_333333333.mp3      # Player 3 audio
+├── user_111111111.wav      # Player 1 audio
+├── user_222222222.wav      # Player 2 audio
+├── user_333333333.wav      # Player 3 audio
 └── session_meta.json       # Session metadata
 ```
 
@@ -187,7 +185,7 @@ piapia/
 │   └── sessions.py          # Session models
 ├── sinks/
 │   ├── discord_sink.py      # Discord sink (audio capture)
-│   └── audio_archiver.py    # WAV archive + conversion
+│   └── audio_archiver.py    # WAV archive
 └── utils/
     ├── commandline.py       # CLI arguments
     └── session_paths.py     # Session paths
@@ -206,5 +204,3 @@ MIT License — voir [LICENSE](LICENSE)
 Projet développé pour l'enregistrement vocal Discord 🦜
 
 - [py-cord](https://github.com/Pycord-Development/pycord) — Discord API wrapper
-- [pydub](https://github.com/jiaaro/pydub) — Manipulation audio
-- [ffmpeg](https://ffmpeg.org/) — Conversion audio

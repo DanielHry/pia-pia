@@ -1,10 +1,6 @@
 # piapia/__main__.py
 
 import logging
-import warnings
-
-warnings.filterwarnings("ignore", category=SyntaxWarning, module="pydub")
-
 from piapia.config.settings import Settings
 from piapia.config.logging_config import configure_logging
 from piapia.utils.commandline import parse_args
